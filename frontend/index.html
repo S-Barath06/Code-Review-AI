@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI CODE REVIEWER</title>
+    <meta name="description" content="Agentic AI Code Reviewer analyzing efficiency, complexities, bottlenecks, and compiler optimization flags.">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- External Scripts -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Login Portal -->
+    <div class="login-portal" id="loginPortal">
+        <div class="login-box">
+            <div class="login-header">
+                <div class="login-logo-container">
+                    <i data-lucide="cpu" class="login-logo-icon"></i>
+                </div>
+                <h2>AI CODE REVIEWER</h2>
+                <p id="loginHeaderSubText">Enter credentials to access the workspace</p>
+            </div>
+
+            <div class="login-tabs">
+                <button type="button" class="login-tab active" id="tabSignIn">Sign In</button>
+                <button type="button" class="login-tab" id="tabSignUp">Register</button>
+            </div>
+            
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label for="usernameInput">Username</label>
+                    <div class="input-wrapper">
+                        <i data-lucide="user"></i>
+                        <input type="text" id="usernameInput" placeholder="Enter username" required autocomplete="username">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="passwordInput">Password</label>
+                    <div class="input-wrapper">
+                        <i data-lucide="lock"></i>
+                        <input type="password" id="passwordInput" placeholder="Enter password" required autocomplete="current-password">
+                    </div>
+                </div>
+                
+                <div class="login-hint" id="loginHint">
+                    <i data-lucide="info"></i>
+                    <span>First time? Select **Register** to create a new database.</span>
+                </div>
+                
+                <div id="loginErrorMessage" class="login-error-message hidden">
+                    Invalid username or password. Please try again.
+                </div>
+                <div id="loginSuccessMessage" class="login-success-message hidden">
+                    Account registered successfully! Please sign in.
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-login btn-shimmer" id="btnLoginSubmit">
+                    <i data-lucide="log-in" id="loginSubmitIcon"></i> <span id="loginSubmitText">Sign In</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="app-container hidden">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i data-lucide="cpu" class="logo-icon"></i>
+                    <span>Code AI Analyzer</span>
+                </div>
+                <span class="logo-tag">Agentic Reviewer v1.0</span>
+            </div>
+
+            <!-- User Profile Card -->
+            <div class="sidebar-section profile-section">
+                <div class="profile-card">
+                    <div class="profile-avatar-container">
+                        <div class="profile-avatar" id="profileAvatar">CE</div>
+                    </div>
+                    <div class="profile-info">
+                        <div class="profile-name-container">
+                            <input type="text" id="profileName" value="Code Explorer" title="Click to rename" spellcheck="false">
+                            <i data-lucide="edit-2" class="edit-icon"></i>
+                        </div>
+                        <div class="profile-stats">
+                            <div class="stat-item" title="Total XP based on solved scores">
+                                <i data-lucide="award"></i>
+                                <span id="profileXP">0 XP</span>
+                            </div>
+                            <div class="stat-item" title="Exercises Solved">
+                                <i data-lucide="check-circle-2"></i>
+                                <span id="profileCompleted">0 / 60</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Accordion Group -->
+            <div class="sidebar-section accordion-section">
+                <button class="accordion-header active" id="homeHeader">
+                    <span class="header-title"><i data-lucide="trending-up"></i> Progress</span>
+                    <i data-lucide="chevron-right" class="chevron-icon" style="transform: none;"></i>
+                </button>
+            </div>
+
+            <!-- Code Review Accordion Group -->
+            <div class="sidebar-section accordion-section">
+                <button class="accordion-header" id="codeReviewHeader">
+                    <span class="header-title"><i data-lucide="cpu"></i> Code Review</span>
+                    <i data-lucide="chevron-right" class="chevron-icon" style="transform: none;"></i>
+                </button>
+            </div>
+
+            <!-- Exercises Accordion Group -->
+            <div class="sidebar-section accordion-section">
+                <button class="accordion-header" id="exercisesAccordionHeader">
+                    <span class="header-title"><i data-lucide="award"></i> Exercises</span>
+                    <i data-lucide="chevron-down" class="chevron-icon"></i>
+                </button>
+                <div class="accordion-content hidden" id="exercisesAccordionContent">
+                    <!-- Java Sub-group -->
+                    <div class="exercises-subsection">
+                        <button class="subsection-header" id="javaSubsectionHeader">
+                            <span>Java Exercises</span>
+                            <i data-lucide="chevron-down" class="chevron-icon"></i>
+                        </button>
+                        <div class="subsection-content hidden" id="javaExercisesList">
+                            <!-- Injected dynamically in app.js -->
+                        </div>
+                    </div>
+
+                    <!-- Python Sub-group -->
+                    <div class="exercises-subsection">
+                        <button class="subsection-header" id="pythonSubsectionHeader">
+                            <span>Python Exercises</span>
+                            <i data-lucide="chevron-down" class="chevron-icon"></i>
+                        </button>
+                        <div class="subsection-content hidden" id="pythonExercisesList">
+                            <!-- Injected dynamically in app.js -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Accordion Group -->
+            <div class="sidebar-section accordion-section flex-grow">
+                <button class="accordion-header" id="historyAccordionHeader">
+                    <span class="header-title"><i data-lucide="history"></i> Review History</span>
+                    <i data-lucide="chevron-down" class="chevron-icon"></i>
+                </button>
+                <div class="accordion-content hidden" id="historyAccordionContent">
+                    <div class="history-list" id="historyList">
+                        <div class="history-empty">No reviews run yet</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar Footer & Settings -->
+            <div class="sidebar-footer">
+                <button class="btn btn-icon-text" id="btnSettings">
+                    <i data-lucide="settings"></i> Settings
+                </button>
+                <button class="btn btn-icon-text" id="btnSignOut">
+                    <i data-lucide="log-out"></i> Sign Out
+                </button>
+                <div class="theme-toggle-container">
+                    <button class="btn-theme active" id="btnDarkTheme" title="Dark Mode">
+                        <i data-lucide="moon"></i>
+                    </button>
+                    <button class="btn-theme" id="btnLightTheme" title="Light Mode">
+                        <i data-lucide="sun"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Work Area -->
+        <main class="main-content">
+            <header class="main-header">
+                <div class="header-titles">
+                    <h1>Agentic Code Reviewer</h1>
+                    <p>Detect efficiency bottlenecks, evaluate complexity parameters, and optimize compiler structures.</p>
+                </div>
+                <div class="api-status-badge" id="apiStatusBadge">
+                    <span class="badge-dot dot-offline"></span>
+                    <span class="badge-text">No API Key</span>
+                </div>
+            </header>
+
+            <!-- Home Page View -->
+            <div class="home-container" id="stateHome">
+                <!-- Hero Section -->
+                <div class="home-hero">
+                    <div class="hero-badge"><i data-lucide="sparkles"></i> Agentic AI Power</div>
+                    <h1>Optimize Code Performance Instantly</h1>
+                    <p>Code AI Analyzer scans complexity, pinpoints memory overheads, and designs optimized implementations tailored for your target compiler.</p>
+                </div>
+
+                <!-- Training Dashboard (Progress) -->
+                <div class="home-stats-card">
+                    <h2>Progress</h2>
+                    <div class="stats-row">
+                        <div class="stat-box">
+                            <span class="stat-value" id="homeXP">0 XP</span>
+                            <span class="stat-label">Total Experience</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-value" id="homeCompleted">0 / 60</span>
+                            <span class="stat-label">Challenges Solved</span>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Action Cards Grid -->
+                <div class="home-grid">
+                    <div class="home-card action-card" id="cardStartReview">
+                        <div class="card-icon"><i data-lucide="code-2"></i></div>
+                        <h3>Custom Code Review</h3>
+                        <p>Write or paste your own custom Java, Python, C++, or JavaScript routines to execute a real-time complexity evaluation.</p>
+                        <span class="card-btn">Start Reviewer <i data-lucide="arrow-right"></i></span>
+                    </div>
+
+                    <div class="home-card action-card" id="cardExploreExercises">
+                        <div class="card-icon"><i data-lucide="award"></i></div>
+                        <h3>Practice Challenges</h3>
+                        <p>Sharpen your algorithmic efficiency skills by completing 60 dynamic programming challenges in Java and Python.</p>
+                        <span class="card-btn">Explore Practice <i data-lucide="arrow-right"></i></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="workspace-grid hidden" id="stateWorkspace">
+                <!-- Left Panel: Input Editor -->
+                <section class="panel editor-panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <i data-lucide="edit-3"></i> Source Code Input
+                        </div>
+                        <div class="editor-controls">
+                            <select id="languageSelect" class="form-select">
+                                <option value="cpp">C++ (GCC/Clang)</option>
+                                <option value="python">Python 3</option>
+                                <option value="javascript">JavaScript (V8/Node)</option>
+                                <option value="java">Java (OpenJDK)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="panel-body editor-body" style="display: flex; flex-direction: column; gap: 10px;">
+                        <div class="textarea-container" style="flex: 2; min-height: 200px;">
+                            <textarea id="codeInput" placeholder="Paste or type your code here..." spellcheck="false"></textarea>
+                        </div>
+                        <div class="textarea-container" style="flex: 1; min-height: 100px;">
+                            <textarea id="customInput" placeholder="Custom Input (Optional) - Used for input() / Scanner / cin..." spellcheck="false" style="font-family: var(--font-mono); padding: 15px; width: 100%; height: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: var(--text-primary); resize: none;"></textarea>
+                        </div>
+                    </div>
+                    <div class="panel-footer editor-footer">
+                        <button class="btn btn-outline" id="btnClear">Clear</button>
+                        <button class="btn btn-primary btn-shimmer" id="btnAnalyze">
+                            <i data-lucide="sparkles"></i> Run AI Review
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Right Panel: Output & Reports -->
+                <section class="panel report-panel">
+                    <!-- Default Screen: Empty State -->
+                    <div class="report-state state-empty" id="stateEmpty">
+                        <div class="empty-icon">
+                            <i data-lucide="terminal"></i>
+                        </div>
+                        <h2>Ready to Analyze</h2>
+                        <p>Write your code or choose one of our templates to evaluate complexity performance, inspect code bottlenecks, and view optimized compilation compiler advice.</p>
+                        <div class="quick-tips">
+                            <div class="tip-item">
+                                <i data-lucide="check-circle-2"></i>
+                                <span>Get exact algorithmic big-O runtime scores.</span>
+                            </div>
+                            <div class="tip-item">
+                                <i data-lucide="check-circle-2"></i>
+                                <span>Learn GCC optimization flags, PyPy optimizations, etc.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- State: Loading Spinner -->
+                    <div class="report-state state-loading hidden" id="stateLoading">
+                        <div class="loading-spinner-container">
+                            <div class="loading-spinner"></div>
+                            <h3>Reviewing & Executing Code...</h3>
+                            <p>Communicating with compiler toolchain and AI analysis engine.</p>
+                        </div>
+                    </div>
+
+                    <!-- State: Report Dashboard -->
+                    <div class="report-state state-dashboard hidden" id="stateDashboard">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <i data-lucide="bar-chart-2"></i> Efficiency Assessment
+                            </div>
+                        </div>
+                        
+                        <div class="dashboard-scrollable">
+                            <!-- Summary Cards -->
+                            <div class="summary-cards">
+                                <!-- Efficiency Score -->
+                                <div class="metric-card score-card">
+                                    <div class="metric-header">Efficiency Score</div>
+                                    <div class="score-circle-container">
+                                        <svg class="score-ring" width="100" height="100">
+                                            <circle class="score-ring-bg" cx="50" cy="50" r="40"></circle>
+                                            <circle class="score-ring-fill" id="scoreRingFill" cx="50" cy="50" r="40"></circle>
+                                        </svg>
+                                        <div class="score-value" id="scoreText">85%</div>
+                                    </div>
+                                    <div class="score-label" id="scoreLabel">Fair Quality</div>
+                                </div>
+
+                                <!-- Complexity Details -->
+                                <div class="metric-card complexity-card">
+                                    <div class="metric-header">Computational Complexity</div>
+                                    <div class="complexity-comparisons">
+                                        <div class="comp-row">
+                                            <span class="comp-label">Time Complexity</span>
+                                            <div class="comp-badges">
+                                                <span class="badge badge-error" id="timeComplexityOrig">O(N²)</span>
+                                                <i data-lucide="arrow-right" class="arrow-icon"></i>
+                                                <span class="badge badge-success" id="timeComplexityOpt">O(N log N)</span>
+                                            </div>
+                                        </div>
+                                        <div class="comp-row">
+                                            <span class="comp-label">Space Complexity</span>
+                                            <div class="comp-badges">
+                                                <span class="badge badge-warning" id="spaceComplexityOrig">O(N)</span>
+                                                <i data-lucide="arrow-right" class="arrow-icon"></i>
+                                                <span class="badge badge-success" id="spaceComplexityOpt">O(1)</span>
+                                            </div>
+                                        </div>
+                                        <div class="comp-row">
+                                            <span class="comp-label">Compiler / Version</span>
+                                            <div class="comp-badges">
+                                                <span class="badge badge-success" id="compilerInfo">—</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Compiler Execution Output -->
+                            <div class="dashboard-section compiler-execution-section">
+                                <div class="section-header-row">
+                                    <h3><i data-lucide="play-circle"></i> Compiler Execution & Output</h3>
+                                    <span class="status-badge" id="compileStatusBadge">Not Run</span>
+                                </div>
+                                <div class="execution-metrics-row">
+                                    <div class="exec-metric">
+                                        <span class="exec-metric-label">Actual Runtime</span>
+                                        <span class="exec-metric-value" id="execTimeVal">—</span>
+                                    </div>
+                                </div>
+                                <div class="console-output-container">
+                                    <div class="console-header">Console Output</div>
+                                    <pre class="console-body" id="consoleOutputBlock">Write code and run AI review to see compiler output.</pre>
+                                </div>
+                            </div>
+
+                            <!-- Code Comparison/Diff Section -->
+                            <div class="dashboard-section comparison-section">
+                                <div class="comparison-tabs">
+                                    <h3><i data-lucide="check-square"></i> Optimized Code Implementation</h3>
+                                    <button class="btn btn-outline btn-sm" id="btnCopyOptimized">
+                                        <i data-lucide="copy"></i> Copy Code
+                                    </button>
+                                </div>
+                                <div class="code-comparison-viewer">
+                                    <pre class="line-numbers"><code class="language-javascript" id="optimizedCodeBlock">
+// Loading optimized implementation...
+                                    </code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Settings Dialog / Modal -->
+    <div class="dialog-backdrop hidden" id="settingsDialog">
+        <div class="dialog-content">
+            <div class="dialog-header">
+                <h2>Settings & API Keys</h2>
+                <button class="btn-close" id="btnSettingsClose"><i data-lucide="x"></i></button>
+            </div>
+            <div class="dialog-body">
+                <div class="form-group">
+                    <label for="apiKeyInput">Google Gemini API Key</label>
+                    <input type="password" id="apiKeyInput" class="form-input" placeholder="AIzaSy...">
+                    <small class="form-help">Enter a Gemini API Key to enable <strong>Live AI Review Mode</strong>. Reviews will use the Gemini 2.5 Flash model directly from your browser. Your key is stored locally in your browser and never leaves your device.</small>
+                </div>
+                <div class="api-guide">
+                    <h4>How to get a key?</h4>
+                    <ol>
+                        <li>Go to Google AI Studio at <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer">aistudio.google.com</a>.</li>
+                        <li>Create a free API Key.</li>
+                        <li>Paste the key above and save.</li>
+                    </ol>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button class="btn btn-outline" id="btnSettingsClear">Clear Key</button>
+                <button class="btn btn-primary" id="btnSettingsSave">Save Configuration</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Files -->
+    <script src="exercises/java.js?v=3"></script>
+    <script src="exercises/python.js?v=3"></script>
+    <script src="mock-analyzer.js?v=3"></script>
+    <script src="app.js?v=3"></script>
+</body>
+</html>

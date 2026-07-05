@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: ai-code-reviewer
+    env: docker
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: PORT
+        value: "3000"
