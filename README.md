@@ -1,4 +1,4 @@
-# Antigravity AI Code Reviewer
+#  AI Code Reviewer
 
 A premium, agentic single-page web application designed to analyze source code efficiency, provide optimization tips, trace time/space complexity improvements (Big-O notation), and recommend suitable compilers and optimization flags for compilation.
 
@@ -35,7 +35,7 @@ A premium, agentic single-page web application designed to analyze source code e
        ```
 3. **Configure Live AI Mode (Optional)**:
    - Click the **Settings** button in the lower left corner.
-   - Enter your **Google Gemini API Key** (acquired from [Google AI Studio](https://aistudio.google.com/)).
+   - Enter your **Groq API Key** .
    - Click **Save Configuration**. The API badge will shift to **Live AI Mode**.
 
 ## Technology Stack
