@@ -1,4 +1,4 @@
-#  AI Code Reviewer
+#  AI C Code Reviewer
 
 A premium, agentic single-page web application designed to analyze source code efficiency, provide optimization tips, trace time/space complexity improvements (Big-O notation), and recommend suitable compilers and optimization flags for compilation.
 
