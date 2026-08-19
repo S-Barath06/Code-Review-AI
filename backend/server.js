@@ -167,9 +167,9 @@ app.post('/api/review', async (req, res) => {
         // Run local compiler first
         const execution = executeCode(code, language, input);
 
-        // Get Groq API key
-        const apiKey = process.env.GROQ_API_KEY;
-        if (!apiKey) return res.status(500).json({ error: 'No Groq API key configured on the server.' });
+        // Get API key from env or from frontend header (frontend sends it as X-Gemini-API-Key)
+        const apiKey = process.env.GROQ_API_KEY || req.headers['x-gemini-api-key'];
+        if (!apiKey) return res.status(500).json({ error: 'No Groq API key configured on the server and none provided by client.' });
 
         const prompt = `You are a high-performance software engineering code reviewer.
 
