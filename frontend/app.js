@@ -289,6 +289,32 @@ function setupEventListeners() {
     // Copy Buttons
     btnCopyOptimized.addEventListener('click', () => copyToClipboard(optimizedCodeBlock.textContent, btnCopyOptimized));
 
+    // Export Buttons
+    const btnExportMarkdown = document.getElementById('btnExportMarkdown');
+    const btnExportPdf = document.getElementById('btnExportPdf');
+    if (btnExportMarkdown) btnExportMarkdown.addEventListener('click', exportMarkdownReport);
+    if (btnExportPdf) btnExportPdf.addEventListener('click', exportPdfReport);
+
+    // Diff View Toggle Buttons
+    const btnDiffSideBySide = document.getElementById('btnDiffSideBySide');
+    const btnDiffInline = document.getElementById('btnDiffInline');
+    if (btnDiffSideBySide) {
+        btnDiffSideBySide.addEventListener('click', () => {
+            currentDiffMode = 'side-by-side';
+            btnDiffSideBySide.classList.add('active');
+            if (btnDiffInline) btnDiffInline.classList.remove('active');
+            renderDiffView();
+        });
+    }
+    if (btnDiffInline) {
+        btnDiffInline.addEventListener('click', () => {
+            currentDiffMode = 'inline';
+            btnDiffInline.classList.add('active');
+            if (btnDiffSideBySide) btnDiffSideBySide.classList.remove('active');
+            renderDiffView();
+        });
+    }
+
     // Theme Switchers
     btnDarkTheme.addEventListener('click', () => applyTheme('dark'));
     btnLightTheme.addEventListener('click', () => applyTheme('light'));
@@ -709,17 +735,14 @@ function displayResults(result) {
         cpp: "GCC 11+ (C++17)",
         python: "CPython 3.10+ / PyPy3",
         javascript: "V8 / Node.js 18+",
-        java: "OpenJDK 17+"
+        java: "OpenJDK 17+",
+        go: "Go 1.21+",
+        rust: "rustc 1.70+"
     };
     compilerInfoEl.textContent = result.compilerInfo || defaultCompilers[appState.currentLanguage] || "Standard Compiler";
 
-    // 5. Optimized Code Block
-    optimizedCodeBlock.textContent = result.optimizedCode;
-    
-    // Set appropriate Prism class for syntax highlighting
-    optimizedCodeBlock.className = `language-${appState.currentLanguage}`;
-    // Re-highlight the element using Prism.js
-    Prism.highlightElement(optimizedCodeBlock);
+    // 5. Render Code Implementation via Diff Viewer
+    renderDiffView();
 
     // 6. Render Compiler Execution and Output
     if (result.execution) {
@@ -772,6 +795,150 @@ function displayResults(result) {
 
     // Refresh icons inside rendered fields
     lucide.createIcons();
+}
+
+// Global diff view state
+let currentDiffMode = 'side-by-side'; // 'side-by-side' or 'inline'
+
+function escapeHtml(text) {
+    if (!text) return '';
+    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function renderDiffView() {
+    const diffViewerContainer = document.getElementById('diffViewerContainer');
+    if (!diffViewerContainer || !appState.analysisResult) return;
+
+    if (currentDiffMode === 'side-by-side') {
+        diffViewerContainer.innerHTML = `
+            <pre class="line-numbers"><code class="language-${appState.currentLanguage}" id="optimizedCodeBlock">${escapeHtml(appState.analysisResult.optimizedCode)}</code></pre>
+        `;
+        const codeEl = document.getElementById('optimizedCodeBlock');
+        if (codeEl && window.Prism) Prism.highlightElement(codeEl);
+        return;
+    }
+
+    // Line-by-Line Diff View
+    const origLines = (codeInputEl.value || '').split('\n');
+    const optLines = (appState.analysisResult.optimizedCode || '').split('\n');
+    
+    let html = `<div style="font-family: var(--font-mono); font-size: 0.85rem; line-height: 1.6; background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px; overflow-x: auto; border: 1px solid rgba(255,255,255,0.08);">`;
+    
+    const maxLen = Math.max(origLines.length, optLines.length);
+    for (let i = 0; i < maxLen; i++) {
+        const orig = origLines[i];
+        const opt = optLines[i];
+        
+        if (orig === opt) {
+            if (orig !== undefined) {
+                html += `<div style="color: #94a3b8; padding: 2px 6px;">&nbsp; ${escapeHtml(orig)}</div>`;
+            }
+        } else {
+            if (orig !== undefined) {
+                html += `<div style="background: rgba(239, 68, 68, 0.18); color: #fca5a5; padding: 2px 6px; border-left: 3px solid #ef4444; border-radius: 2px; margin: 1px 0;">- ${escapeHtml(orig)}</div>`;
+            }
+            if (opt !== undefined) {
+                html += `<div style="background: rgba(34, 197, 94, 0.18); color: #86efac; padding: 2px 6px; border-left: 3px solid #22c55e; border-radius: 2px; margin: 1px 0;">+ ${escapeHtml(opt)}</div>`;
+            }
+        }
+    }
+    html += `</div>`;
+    diffViewerContainer.innerHTML = html;
+}
+
+function exportMarkdownReport() {
+    if (!appState.analysisResult) {
+        alert("No analysis result to export yet.");
+        return;
+    }
+    const res = appState.analysisResult;
+    const md = `# AI Code Review Report
+
+**Language:** ${appState.currentLanguage.toUpperCase()}
+**Efficiency Score:** ${res.efficiencyScore}%
+**Time Complexity:** ${res.timeComplexityOriginal} -> ${res.timeComplexityOptimized}
+**Space Complexity:** ${res.spaceComplexityOriginal} -> ${res.spaceComplexityOptimized}
+**Compiler / Toolchain:** ${res.compilerInfo || 'Standard'}
+
+---
+
+## Source Code (Original)
+\`\`\`${appState.currentLanguage}
+${codeInputEl.value}
+\`\`\`
+
+## Optimized Implementation
+\`\`\`${appState.currentLanguage}
+${res.optimizedCode}
+\`\`\`
+
+## Execution Output
+\`\`\`
+Status: ${res.execution?.status || 'N/A'}
+Runtime: ${res.execution?.execTimeMs ? res.execution.execTimeMs + ' ms' : '—'}
+Output:
+${res.execution?.stdout || res.execution?.stderr || 'No output'}
+\`\`\`
+`;
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `code_review_${appState.currentLanguage}_${Date.now()}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function exportPdfReport() {
+    if (!appState.analysisResult) {
+        alert("No analysis result to export yet.");
+        return;
+    }
+    const printWin = window.open('', '_blank');
+    const res = appState.analysisResult;
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Code Review Report</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 30px; color: #111; line-height: 1.6; }
+        h1 { color: #0f172a; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; }
+        .score { font-size: 24px; font-weight: bold; color: #16a34a; }
+        .metrics { display: flex; gap: 20px; margin: 20px 0; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .metric-box { flex: 1; }
+        pre { background: #0f172a; color: #f8fafc; padding: 15px; border-radius: 6px; overflow-x: auto; font-family: 'Courier New', Courier, monospace; }
+        @media print { body { margin: 0; } }
+    </style>
+</head>
+<body>
+    <h1>AI Code Reviewer Report</h1>
+    <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+    <div class="metrics">
+        <div class="metric-box">
+            <strong>Language:</strong> ${appState.currentLanguage.toUpperCase()}<br>
+            <strong>Efficiency Score:</strong> <span class="score">${res.efficiencyScore}%</span>
+        </div>
+        <div class="metric-box">
+            <strong>Time Complexity:</strong> ${res.timeComplexityOriginal} &rarr; ${res.timeComplexityOptimized}<br>
+            <strong>Space Complexity:</strong> ${res.spaceComplexityOriginal} &rarr; ${res.spaceComplexityOptimized}
+        </div>
+        <div class="metric-box">
+            <strong>Compiler:</strong> ${res.compilerInfo || 'Standard Compiler'}<br>
+            <strong>Status:</strong> ${res.execution?.status || 'Executed'}
+        </div>
+    </div>
+    <h2>Original Source Code</h2>
+    <pre><code>${escapeHtml(codeInputEl.value)}</code></pre>
+    <h2>Optimized Code</h2>
+    <pre><code>${escapeHtml(res.optimizedCode)}</code></pre>
+    <h2>Compiler Output</h2>
+    <pre><code>${escapeHtml(res.execution?.stdout || res.execution?.stderr || 'Execution finished clean.')}</code></pre>
+</body>
+</html>`;
+    printWin.document.write(html);
+    printWin.document.close();
+    printWin.focus();
+    setTimeout(() => { printWin.print(); }, 500);
 }
 
 // Convert markdown links e.g. [Godbolt](https://godbolt.org) into regular clickable links
