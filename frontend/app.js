@@ -34,6 +34,10 @@ const profileAvatar = document.getElementById('profileAvatar');
 const homeHeader = document.getElementById('homeHeader');
 const stateHome = document.getElementById('stateHome');
 const stateWorkspace = document.getElementById('stateWorkspace');
+const statePractice = document.getElementById('statePractice');
+const tabPracticeJava = document.getElementById('tabPracticeJava');
+const tabPracticePython = document.getElementById('tabPracticePython');
+const mainPracticeGrid = document.getElementById('mainPracticeGrid');
 const cardStartReview = document.getElementById('cardStartReview');
 const cardExploreExercises = document.getElementById('cardExploreExercises');
 const cardOpenSettings = document.getElementById('cardOpenSettings');
@@ -246,38 +250,21 @@ function setupEventListeners() {
 
     // Home Action Card: Explore Exercises Click
     if (cardExploreExercises) {
-        cardExploreExercises.addEventListener('click', () => {
-            // Expand main Exercises Accordion in sidebar
-            const content = document.getElementById('exercisesAccordionContent');
-            const header = document.getElementById('exercisesAccordionHeader');
-            if (content && header) {
-                content.classList.remove('hidden');
-                header.classList.add('active');
-            }
+        cardExploreExercises.addEventListener('click', () => openPracticePage('java'));
+    }
 
-            // Expand BOTH Java and Python Sub-accordions in sidebar
-            const javaList = document.getElementById('javaExercisesList');
-            const javaHeader = document.getElementById('javaSubsectionHeader');
-            if (javaList) javaList.classList.remove('hidden');
-            if (javaHeader) javaHeader.classList.add('active');
+    // Exercises Accordion Header in Sidebar Click
+    const exercisesAccordionHeader = document.getElementById('exercisesAccordionHeader');
+    if (exercisesAccordionHeader) {
+        exercisesAccordionHeader.addEventListener('click', () => openPracticePage('java'));
+    }
 
-            const pythonList = document.getElementById('pythonExercisesList');
-            const pythonHeader = document.getElementById('pythonSubsectionHeader');
-            if (pythonList) pythonList.classList.remove('hidden');
-            if (pythonHeader) pythonHeader.classList.add('active');
-
-            // Switch view from Home to Workspace
-            if (stateHome) stateHome.classList.add('hidden');
-            if (stateWorkspace) stateWorkspace.classList.remove('hidden');
-
-            stateEmpty.classList.remove('hidden');
-            stateDashboard.classList.add('hidden');
-            stateLoading.classList.add('hidden');
-
-            // Set placeholder prompting user to choose their exercise
-            codeInputEl.value = '';
-            codeInputEl.placeholder = "Select any Java or Python exercise from the sidebar on the left to begin...";
-        });
+    // Main Practice Bar Language Tabs Click
+    if (tabPracticeJava) {
+        tabPracticeJava.addEventListener('click', () => openPracticePage('java'));
+    }
+    if (tabPracticePython) {
+        tabPracticePython.addEventListener('click', () => openPracticePage('python'));
     }
 
     // Home Action Card: Open Settings Click
@@ -523,8 +510,9 @@ function loadExercisesItem(lang, id) {
     if (db) {
         const ex = db.find(e => e.id === id);
         if (ex) {
-            // Hide Home, Show Workspace
+            // Hide Home & Practice, Show Workspace
             if (stateHome) stateHome.classList.add('hidden');
+            if (statePractice) statePractice.classList.add('hidden');
             if (stateWorkspace) stateWorkspace.classList.remove('hidden');
 
             codeInputEl.value = ex.code;
@@ -1038,8 +1026,9 @@ function saveProfileName() {
 
 // Open clean Code Reviewer editor
 function openCodeReviewer() {
-    // Hide Home, Show Workspace
+    // Hide Home & Practice, Show Workspace
     if (stateHome) stateHome.classList.add('hidden');
+    if (statePractice) statePractice.classList.add('hidden');
     if (stateWorkspace) stateWorkspace.classList.remove('hidden');
 
     stateEmpty.classList.remove('hidden');
@@ -1064,9 +1053,10 @@ function openCodeReviewer() {
 
 // Open Home Page view
 function openHomePage() {
-    // Show Home, Hide Workspace
+    // Show Home, Hide Workspace & Practice
     if (stateHome) stateHome.classList.remove('hidden');
     if (stateWorkspace) stateWorkspace.classList.add('hidden');
+    if (statePractice) statePractice.classList.add('hidden');
 
     // Highlight Home in sidebar
     document.querySelectorAll('.accordion-header').forEach(h => h.classList.remove('active'));
@@ -1078,6 +1068,70 @@ function openHomePage() {
 
     // Re-render stats in welcome card
     renderProfile();
+}
+
+// Open Main Bar Practice View
+let currentPracticeLang = 'java';
+
+function openPracticePage(lang = 'java') {
+    if (stateHome) stateHome.classList.add('hidden');
+    if (stateWorkspace) stateWorkspace.classList.add('hidden');
+    if (statePractice) statePractice.classList.remove('hidden');
+
+    // Highlight Exercises header in sidebar
+    const exercisesHeader = document.getElementById('exercisesAccordionHeader');
+    document.querySelectorAll('.accordion-header').forEach(h => h.classList.remove('active'));
+    if (exercisesHeader) exercisesHeader.classList.add('active');
+
+    // Expand sidebar exercises accordion as well
+    const content = document.getElementById('exercisesAccordionContent');
+    if (content) content.classList.remove('hidden');
+
+    currentPracticeLang = lang;
+    renderMainPracticeGrid(lang);
+}
+
+function renderMainPracticeGrid(lang) {
+    if (!mainPracticeGrid) return;
+
+    if (tabPracticeJava && tabPracticePython) {
+        if (lang === 'java') {
+            tabPracticeJava.classList.add('active');
+            tabPracticePython.classList.remove('active');
+        } else {
+            tabPracticePython.classList.add('active');
+            tabPracticeJava.classList.remove('active');
+        }
+    }
+
+    const exercises = lang === 'java' ? window.JAVA_EXERCISES : window.PYTHON_EXERCISES;
+    if (!exercises) {
+        mainPracticeGrid.innerHTML = '<div class="history-empty">No exercises loaded.</div>';
+        return;
+    }
+
+    mainPracticeGrid.innerHTML = '';
+    exercises.forEach(ex => {
+        const card = document.createElement('div');
+        card.className = 'practice-card';
+        card.innerHTML = `
+            <div class="practice-card-header">
+                <span class="practice-card-badge badge-${lang}">${lang.toUpperCase()}</span>
+                <span class="practice-card-num">Exercise ${ex.id}</span>
+            </div>
+            <div class="practice-card-title">${ex.title}</div>
+            <div class="practice-card-footer">
+                <span>Start Challenge</span>
+                <i data-lucide="arrow-right"></i>
+            </div>
+        `;
+        card.addEventListener('click', () => {
+            loadExercisesItem(lang, ex.id);
+        });
+        mainPracticeGrid.appendChild(card);
+    });
+
+    if (window.lucide) lucide.createIcons();
 }
 
 // Check Groq API status on the backend server
