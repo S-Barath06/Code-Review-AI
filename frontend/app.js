@@ -247,19 +247,36 @@ function setupEventListeners() {
     // Home Action Card: Explore Exercises Click
     if (cardExploreExercises) {
         cardExploreExercises.addEventListener('click', () => {
+            // Expand main Exercises Accordion in sidebar
             const content = document.getElementById('exercisesAccordionContent');
             const header = document.getElementById('exercisesAccordionHeader');
             if (content && header) {
                 content.classList.remove('hidden');
                 header.classList.add('active');
             }
+
+            // Expand BOTH Java and Python Sub-accordions in sidebar
             const javaList = document.getElementById('javaExercisesList');
             const javaHeader = document.getElementById('javaSubsectionHeader');
             if (javaList) javaList.classList.remove('hidden');
             if (javaHeader) javaHeader.classList.add('active');
 
-            // Switch to workspace view and load first Java practice challenge
-            loadExercisesItem('java', 1);
+            const pythonList = document.getElementById('pythonExercisesList');
+            const pythonHeader = document.getElementById('pythonSubsectionHeader');
+            if (pythonList) pythonList.classList.remove('hidden');
+            if (pythonHeader) pythonHeader.classList.add('active');
+
+            // Switch view from Home to Workspace
+            if (stateHome) stateHome.classList.add('hidden');
+            if (stateWorkspace) stateWorkspace.classList.remove('hidden');
+
+            stateEmpty.classList.remove('hidden');
+            stateDashboard.classList.add('hidden');
+            stateLoading.classList.add('hidden');
+
+            // Set placeholder prompting user to choose their exercise
+            codeInputEl.value = '';
+            codeInputEl.placeholder = "Select any Java or Python exercise from the sidebar on the left to begin...";
         });
     }
 
