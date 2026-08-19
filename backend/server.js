@@ -87,6 +87,30 @@ function executeCode(code, language, input = '') {
             return { status: run.status === 0 ? 'Success' : 'Runtime Error', stdout: run.stdout, stderr: run.stderr, execTimeMs: Date.now() - start };
         }
 
+        // ── Go ───────────────────────────────────────────────────────────────
+        if (language === 'go') {
+            const filePath = path.join(tmpDir, 'temp.go');
+            fs.writeFileSync(filePath, code);
+            const r = spawnSync('go', ['run', filePath], { input: input, timeout: 5000, encoding: 'utf8' });
+            if (r.error?.code === 'ETIMEDOUT') return { status: 'Timeout',            error: 'Execution timed out.' };
+            if (r.error)                        return { status: 'Compiler Not Found', error: 'Go (go) not found on this system.' };
+            return { status: r.status === 0 ? 'Success' : 'Runtime Error', stdout: r.stdout, stderr: r.stderr, execTimeMs: Date.now() - start };
+        }
+
+        // ── Rust ─────────────────────────────────────────────────────────────
+        if (language === 'rust') {
+            const filePath = path.join(tmpDir, 'temp.rs');
+            const outPath  = path.join(tmpDir, process.platform === 'win32' ? 'temp_rs_out.exe' : 'temp_rs_out');
+            fs.writeFileSync(filePath, code);
+
+            const compile = spawnSync('rustc', [filePath, '-O', '-o', outPath], { timeout: 10000, encoding: 'utf8' });
+            if (compile.error)        return { status: 'Compiler Not Found', error: 'rustc not found on this system.' };
+            if (compile.status !== 0)  return { status: 'Compilation Error', error: compile.stderr };
+
+            const run = spawnSync(outPath, [], { input: input, timeout: 5000, encoding: 'utf8' });
+            return { status: run.status === 0 ? 'Success' : 'Runtime Error', stdout: run.stdout, stderr: run.stderr, execTimeMs: Date.now() - start };
+        }
+
         return { status: 'Unsupported Language', error: `Language '${language}' is not supported for local execution.` };
     } catch (e) {
         return { status: 'Execution Failed', error: e.message };
@@ -188,34 +212,73 @@ Return ONLY a valid JSON object with NO extra text, markdown, or explanation:
   "optimizedCode": "<complete optimized code>"
 }`;
 
-        // Call Groq API (Node 18+ has built-in fetch)
-        const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: 'llama-3.1-70b-versatile',
-                messages: [{ role: 'user', content: prompt }],
-                temperature: 0.3,
-                max_tokens: 4096
-            })
-        });
-
-        if (!groqRes.ok) {
-            const err = await groqRes.json().catch(() => ({}));
-            throw new Error(err?.error?.message || `Groq API returned ${groqRes.status}`);
+        // Fetch available models dynamically or use prioritized list
+        let models = ['openai/gpt-oss-120b', 'qwen/qwen3.6-27b', 'groq/compound', 'openai/gpt-oss-20b', 'groq/compound-mini'];
+        
+        try {
+            const listRes = await fetch('https://api.groq.com/openai/v1/models', {
+                headers: { 'Authorization': `Bearer ${apiKey}` }
+            });
+            if (listRes.ok) {
+                const listData = await listRes.json();
+                if (Array.isArray(listData.data)) {
+                    const activeIds = listData.data
+                        .map(m => m.id)
+                        .filter(id => !id.includes('whisper') && !id.includes('orpheus') && !id.includes('guard'));
+                    if (activeIds.length > 0) {
+                        models = [...new Set([...models, ...activeIds])];
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn('Failed to fetch dynamic Groq model list:', err.message);
         }
 
-        const groqData = await groqRes.json();
-        let text = groqData.choices[0].message.content;
+        let lastError = null;
+        let aiResult = null;
 
-        // Strip markdown fences if present
-        const fenced = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-        if (fenced) text = fenced[1];
+        for (const model of models) {
+            try {
+                const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [{ role: 'user', content: prompt }],
+                        temperature: 0.3,
+                        max_tokens: 4096
+                    })
+                });
 
-        const aiResult = JSON.parse(text.trim());
+                if (!groqRes.ok) {
+                    const err = await groqRes.json().catch(() => ({}));
+                    const msg = err?.error?.message || `Groq API returned ${groqRes.status} for model ${model}`;
+                    console.warn(`Model ${model} failed: ${msg}`);
+                    lastError = new Error(msg);
+                    continue; // try next model
+                }
+
+                const groqData = await groqRes.json();
+                let text = groqData.choices[0].message.content;
+
+                // Strip markdown fences if present
+                const fenced = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+                if (fenced) text = fenced[1];
+
+                aiResult = JSON.parse(text.trim());
+                break; // successfully received response
+            } catch (err) {
+                lastError = err;
+                console.warn(`Attempt with model ${model} threw error:`, err.message);
+            }
+        }
+
+        if (!aiResult) {
+            throw lastError || new Error('All Groq model requests failed.');
+        }
 
         res.json({ aiResult, execution });
     } catch (e) {
