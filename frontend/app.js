@@ -155,6 +155,9 @@ function init() {
     // Render 30 Exercises
     renderExercises();
 
+    // Render Code Review Templates Sidebar
+    renderCodeReviewSidebar();
+
     // Render User Profile Card
     renderProfile();
 
@@ -281,6 +284,24 @@ function setupEventListeners() {
         pythonSubsectionHeader.addEventListener('click', () => openPracticePage('python'));
     }
 
+    // Sidebar Code Review Subsections Click
+    const codeReviewSubsections = [
+        { headerId: 'cppReviewSubsectionHeader', listId: 'cppReviewList', lang: 'cpp' },
+        { headerId: 'pythonReviewSubsectionHeader', listId: 'pythonReviewList', lang: 'python' },
+        { headerId: 'jsReviewSubsectionHeader', listId: 'jsReviewList', lang: 'javascript' },
+        { headerId: 'javaReviewSubsectionHeader', listId: 'javaReviewList', lang: 'java' },
+        { headerId: 'goReviewSubsectionHeader', listId: 'goReviewList', lang: 'go' },
+        { headerId: 'rustReviewSubsectionHeader', listId: 'rustReviewList', lang: 'rust' }
+    ];
+
+    codeReviewSubsections.forEach(({ headerId, listId, lang }) => {
+        const header = document.getElementById(headerId);
+        if (header) {
+            header.addEventListener('click', () => openCodeReviewer(lang));
+        }
+        setupAccordion(headerId, listId);
+    });
+
     // Home Action Card: Open Settings Click
     if (cardOpenSettings) {
         cardOpenSettings.addEventListener('click', () => {
@@ -289,9 +310,10 @@ function setupEventListeners() {
         });
     }
 
-    // Listeners configured dynamically inside renderExercises
+    // Listeners configured dynamically inside renderExercises & renderCodeReviewSidebar
     
     // Configure Collapsible Accordions
+    setupAccordion('codeReviewHeader', 'codeReviewAccordionContent');
     setupAccordion('exercisesAccordionHeader', 'exercisesAccordionContent');
     setupAccordion('javaSubsectionHeader', 'javaExercisesList');
     setupAccordion('pythonSubsectionHeader', 'pythonExercisesList');
@@ -515,6 +537,50 @@ function renderExercises() {
             pythonExercisesList.appendChild(btn);
         });
     }
+}
+
+// Render Code Review Templates dynamically in Sidebar
+function renderCodeReviewSidebar() {
+    const reviewLanguages = [
+        { id: 'cppReviewList', lang: 'cpp' },
+        { id: 'pythonReviewList', lang: 'python' },
+        { id: 'jsReviewList', lang: 'javascript' },
+        { id: 'javaReviewList', lang: 'java' },
+        { id: 'goReviewList', lang: 'go' },
+        { id: 'rustReviewList', lang: 'rust' }
+    ];
+
+    reviewLanguages.forEach(({ id, lang }) => {
+        const container = document.getElementById(id);
+        if (!container) return;
+        container.innerHTML = '';
+
+        const templateData = window.MOCK_TEMPLATES ? window.MOCK_TEMPLATES[lang] : null;
+        if (templateData) {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-secondary exercise-btn review-template-btn';
+            btn.setAttribute('data-lang', lang);
+            btn.innerHTML = `<i data-lucide="code-2"></i> ${templateData.title}`;
+            btn.addEventListener('click', () => loadCodeReviewTemplate(lang));
+            container.appendChild(btn);
+        }
+    });
+
+    if (window.lucide) lucide.createIcons();
+}
+
+function loadCodeReviewTemplate(lang) {
+    const template = window.MOCK_TEMPLATES ? window.MOCK_TEMPLATES[lang] : null;
+    if (!template) return;
+
+    openCodeReviewer(lang);
+    codeInputEl.value = template.code;
+    codeInputEl.focus();
+
+    // Set visual active highlight
+    document.querySelectorAll('.exercise-btn').forEach(b => b.classList.remove('active'));
+    const activeBtn = document.querySelector(`.review-template-btn[data-lang="${lang}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
 }
 
 // Load coding exercise metadata and comments
@@ -1039,7 +1105,7 @@ function saveProfileName() {
 }
 
 // Open clean Code Reviewer editor
-function openCodeReviewer() {
+function openCodeReviewer(targetLang) {
     // Hide Home & Practice, Show Workspace
     if (stateHome) stateHome.classList.add('hidden');
     if (statePractice) statePractice.classList.add('hidden');
@@ -1055,10 +1121,23 @@ function openCodeReviewer() {
 
     // Highlight Code Review in sidebar
     document.querySelectorAll('.accordion-header').forEach(h => h.classList.remove('active'));
+    const codeReviewHeader = document.getElementById('codeReviewHeader');
     if (codeReviewHeader) codeReviewHeader.classList.add('active');
 
-    // Clear code input and set placeholder
-    codeInputEl.value = '';
+    // Expand sidebar code review accordion
+    const content = document.getElementById('codeReviewAccordionContent');
+    if (content) content.classList.remove('hidden');
+
+    // Set target language if provided
+    if (targetLang && typeof targetLang === 'string' && languageSelectEl) {
+        languageSelectEl.value = targetLang;
+        appState.currentLanguage = targetLang;
+    }
+
+    // Clear code input if not explicitly loading a template
+    if (!targetLang || typeof targetLang !== 'string') {
+        codeInputEl.value = '';
+    }
     codeInputEl.placeholder = "Write or paste your code here for efficiency review...";
     codeInputEl.focus();
 
