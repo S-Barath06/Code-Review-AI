@@ -35,6 +35,7 @@ const homeHeader = document.getElementById('homeHeader');
 const stateHome = document.getElementById('stateHome');
 const stateWorkspace = document.getElementById('stateWorkspace');
 const statePractice = document.getElementById('statePractice');
+const tabPracticeAll = document.getElementById('tabPracticeAll');
 const tabPracticeJava = document.getElementById('tabPracticeJava');
 const tabPracticePython = document.getElementById('tabPracticePython');
 const mainPracticeGrid = document.getElementById('mainPracticeGrid');
@@ -250,16 +251,19 @@ function setupEventListeners() {
 
     // Home Action Card: Explore Exercises Click
     if (cardExploreExercises) {
-        cardExploreExercises.addEventListener('click', () => openPracticePage('java'));
+        cardExploreExercises.addEventListener('click', () => openPracticePage('all'));
     }
 
     // Exercises Accordion Header in Sidebar Click
     const exercisesAccordionHeader = document.getElementById('exercisesAccordionHeader');
     if (exercisesAccordionHeader) {
-        exercisesAccordionHeader.addEventListener('click', () => openPracticePage('java'));
+        exercisesAccordionHeader.addEventListener('click', () => openPracticePage('all'));
     }
 
     // Main Practice Bar Language Tabs Click
+    if (tabPracticeAll) {
+        tabPracticeAll.addEventListener('click', () => openPracticePage('all'));
+    }
     if (tabPracticeJava) {
         tabPracticeJava.addEventListener('click', () => openPracticePage('java'));
     }
@@ -1071,9 +1075,9 @@ function openHomePage() {
 }
 
 // Open Main Bar Practice View
-let currentPracticeLang = 'java';
+let currentPracticeLang = 'all';
 
-function openPracticePage(lang = 'java') {
+function openPracticePage(lang = 'all') {
     if (stateHome) stateHome.classList.add('hidden');
     if (stateWorkspace) stateWorkspace.classList.add('hidden');
     if (statePractice) statePractice.classList.remove('hidden');
@@ -1091,32 +1095,42 @@ function openPracticePage(lang = 'java') {
     renderMainPracticeGrid(lang);
 }
 
-function renderMainPracticeGrid(lang) {
+function renderMainPracticeGrid(filter = 'all') {
     if (!mainPracticeGrid) return;
 
-    if (tabPracticeJava && tabPracticePython) {
-        if (lang === 'java') {
-            tabPracticeJava.classList.add('active');
-            tabPracticePython.classList.remove('active');
-        } else {
-            tabPracticePython.classList.add('active');
-            tabPracticeJava.classList.remove('active');
+    // Update active tab styles
+    [tabPracticeAll, tabPracticeJava, tabPracticePython].forEach(t => {
+        if (t) t.classList.remove('active');
+    });
+    if (filter === 'all' && tabPracticeAll) tabPracticeAll.classList.add('active');
+    if (filter === 'java' && tabPracticeJava) tabPracticeJava.classList.add('active');
+    if (filter === 'python' && tabPracticePython) tabPracticePython.classList.add('active');
+
+    mainPracticeGrid.innerHTML = '';
+
+    const renderList = [];
+    if (filter === 'all' || filter === 'java') {
+        if (window.JAVA_EXERCISES) {
+            window.JAVA_EXERCISES.forEach(ex => renderList.push({ ...ex, lang: 'java' }));
+        }
+    }
+    if (filter === 'all' || filter === 'python') {
+        if (window.PYTHON_EXERCISES) {
+            window.PYTHON_EXERCISES.forEach(ex => renderList.push({ ...ex, lang: 'python' }));
         }
     }
 
-    const exercises = lang === 'java' ? window.JAVA_EXERCISES : window.PYTHON_EXERCISES;
-    if (!exercises) {
+    if (renderList.length === 0) {
         mainPracticeGrid.innerHTML = '<div class="history-empty">No exercises loaded.</div>';
         return;
     }
 
-    mainPracticeGrid.innerHTML = '';
-    exercises.forEach(ex => {
+    renderList.forEach(ex => {
         const card = document.createElement('div');
         card.className = 'practice-card';
         card.innerHTML = `
             <div class="practice-card-header">
-                <span class="practice-card-badge badge-${lang}">${lang.toUpperCase()}</span>
+                <span class="practice-card-badge badge-${ex.lang}">${ex.lang.toUpperCase()}</span>
                 <span class="practice-card-num">Exercise ${ex.id}</span>
             </div>
             <div class="practice-card-title">${ex.title}</div>
@@ -1126,7 +1140,7 @@ function renderMainPracticeGrid(lang) {
             </div>
         `;
         card.addEventListener('click', () => {
-            loadExercisesItem(lang, ex.id);
+            loadExercisesItem(ex.lang, ex.id);
         });
         mainPracticeGrid.appendChild(card);
     });
