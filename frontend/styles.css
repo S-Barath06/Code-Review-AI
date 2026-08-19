@@ -2047,4 +2047,57 @@ input#profileName:focus {
     color: var(--primary);
 }
 
+/* Sidebar Subsection Accordion Styling */
+.exercises-subsection {
+    display: flex;
+    flex-direction: column;
+    margin-left: 0.5rem;
+    margin-top: 0.25rem;
+}
+
+.subsection-header {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.825rem;
+    font-weight: 600;
+    padding: 0.45rem 0.6rem;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: var(--transition);
+    width: 100%;
+}
+
+.subsection-header:hover {
+    color: var(--text-primary);
+    background-color: var(--bg-tertiary);
+}
+
+.subsection-header.active {
+    color: var(--primary-light);
+}
+
+.subsection-header.active .chevron-icon {
+    transform: rotate(180deg);
+}
+
+.subsection-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding-left: 0.5rem;
+    margin-top: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.exercise-btn.active {
+    background-color: rgba(59, 130, 246, 0.2);
+    border-color: var(--primary);
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
 
