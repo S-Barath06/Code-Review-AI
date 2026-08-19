@@ -68,6 +68,43 @@ public class SearchList {
         return false;
     }
 }`
+  },
+  go: {
+    title: "Slice Append Overhead (Go)",
+    code: `// Inefficient slice reallocation in Go
+package main
+import "fmt"
+
+func buildSlice(n int) []int {
+    var result []int // Inefficient: slice capacity not preallocated
+    for i := 0; i < n; i++ {
+        result = append(result, i)
+    }
+    return result
+}
+
+func main() {
+    nums := buildSlice(10000)
+    fmt.Println("Count:", len(nums))
+}`
+  },
+  rust: {
+    title: "Vector Cloning Overhead (Rust)",
+    code: `// Inefficient cloning inside loop in Rust
+fn process_items(items: Vec<String>) -> Vec<String> {
+    let mut result = Vec::new();
+    for item in items {
+        // Inefficient: redundant clone creates extra allocation
+        result.push(item.clone());
+    }
+    result
+}
+
+fn main() {
+    let data = vec!["apple".to_string(), "banana".to_string()];
+    let res = process_items(data);
+    println!("Processed {} items", res.len());
+}`
   }
 };
 
