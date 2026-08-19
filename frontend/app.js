@@ -602,7 +602,7 @@ async function runReview() {
         // Restore view and show error — no offline simulation
         stateLoading.classList.add('hidden');
         stateEmpty.classList.remove('hidden');
-        alert("⚠️ Could not reach the backend server.\n\nMake sure the server is running:\npowershell -ExecutionPolicy Bypass -File backend\\serve.ps1");
+        alert(`⚠️ Request failed: ${error.message}\n\n(If the server is completely down, make sure it is running.)`);
         return;
     }
 
