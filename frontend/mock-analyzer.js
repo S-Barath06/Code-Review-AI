@@ -435,7 +435,9 @@ public class Palindrome {
     cpp: "GCC 11+ (C++17)",
     python: "CPython 3.10+ / PyPy3",
     javascript: "V8 / Node.js 18+",
-    java: "OpenJDK 17+"
+    java: "OpenJDK 17+",
+    go: "Go 1.21+",
+    rust: "rustc 1.70+"
   };
 
   return {
