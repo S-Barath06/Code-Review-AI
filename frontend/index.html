@@ -19,6 +19,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="styles.css">
@@ -260,6 +262,8 @@
                                 <option value="python">Python 3</option>
                                 <option value="javascript">JavaScript (V8/Node)</option>
                                 <option value="java">Java (OpenJDK)</option>
+                                <option value="go">Go (gc 1.21+)</option>
+                                <option value="rust">Rust (rustc 1.70+)</option>
                             </select>
                         </div>
                     </div>
@@ -311,9 +315,17 @@
 
                     <!-- State: Report Dashboard -->
                     <div class="report-state state-dashboard hidden" id="stateDashboard">
-                        <div class="panel-header">
+                        <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
                             <div class="panel-title">
                                 <i data-lucide="bar-chart-2"></i> Efficiency Assessment
+                            </div>
+                            <div class="report-export-controls" style="display: flex; gap: 8px;">
+                                <button class="btn btn-outline btn-sm" id="btnExportMarkdown" title="Download Markdown Report">
+                                    <i data-lucide="file-text"></i> Export Markdown
+                                </button>
+                                <button class="btn btn-outline btn-sm" id="btnExportPdf" title="Print/Download PDF Report">
+                                    <i data-lucide="download"></i> Export PDF
+                                </button>
                             </div>
                         </div>
                         
@@ -383,13 +395,19 @@
 
                             <!-- Code Comparison/Diff Section -->
                             <div class="dashboard-section comparison-section">
-                                <div class="comparison-tabs">
+                                <div class="comparison-tabs" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
                                     <h3><i data-lucide="check-square"></i> Optimized Code Implementation</h3>
-                                    <button class="btn btn-outline btn-sm" id="btnCopyOptimized">
-                                        <i data-lucide="copy"></i> Copy Code
-                                    </button>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <div class="diff-view-toggle" style="display: flex; gap: 4px; background: rgba(0,0,0,0.3); padding: 3px; border-radius: 6px;">
+                                            <button class="btn btn-xs active" id="btnDiffSideBySide" style="padding: 4px 8px; font-size: 0.75rem;">Side-by-Side</button>
+                                            <button class="btn btn-xs" id="btnDiffInline" style="padding: 4px 8px; font-size: 0.75rem;">Diff View</button>
+                                        </div>
+                                        <button class="btn btn-outline btn-sm" id="btnCopyOptimized">
+                                            <i data-lucide="copy"></i> Copy Code
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="code-comparison-viewer">
+                                <div class="code-comparison-viewer" id="diffViewerContainer">
                                     <pre class="line-numbers"><code class="language-javascript" id="optimizedCodeBlock">
 // Loading optimized implementation...
                                     </code></pre>
