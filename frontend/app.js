@@ -253,6 +253,13 @@ function setupEventListeners() {
                 content.classList.remove('hidden');
                 header.classList.add('active');
             }
+            const javaList = document.getElementById('javaExercisesList');
+            const javaHeader = document.getElementById('javaSubsectionHeader');
+            if (javaList) javaList.classList.remove('hidden');
+            if (javaHeader) javaHeader.classList.add('active');
+
+            // Switch to workspace view and load first Java practice challenge
+            loadExercisesItem('java', 1);
         });
     }
 
