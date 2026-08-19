@@ -271,6 +271,16 @@ function setupEventListeners() {
         tabPracticePython.addEventListener('click', () => openPracticePage('python'));
     }
 
+    // Sidebar Exercises Subsections Click
+    const javaSubsectionHeader = document.getElementById('javaSubsectionHeader');
+    if (javaSubsectionHeader) {
+        javaSubsectionHeader.addEventListener('click', () => openPracticePage('java'));
+    }
+    const pythonSubsectionHeader = document.getElementById('pythonSubsectionHeader');
+    if (pythonSubsectionHeader) {
+        pythonSubsectionHeader.addEventListener('click', () => openPracticePage('python'));
+    }
+
     // Home Action Card: Open Settings Click
     if (cardOpenSettings) {
         cardOpenSettings.addEventListener('click', () => {
@@ -1108,42 +1118,49 @@ function renderMainPracticeGrid(filter = 'all') {
 
     mainPracticeGrid.innerHTML = '';
 
-    const renderList = [];
+    const createSection = (title, icon, lang, list) => {
+        if (!list || list.length === 0) return;
+
+        const secHeader = document.createElement('div');
+        secHeader.className = 'practice-section-header';
+        secHeader.style.gridColumn = '1 / -1';
+        secHeader.style.margin = '1rem 0 0.5rem 0';
+        secHeader.style.display = 'flex';
+        secHeader.style.alignItems = 'center';
+        secHeader.style.gap = '0.5rem';
+        secHeader.style.fontSize = '1.2rem';
+        secHeader.style.fontWeight = '700';
+        secHeader.style.color = 'var(--text-primary)';
+        secHeader.innerHTML = `<i data-lucide="${icon}"></i> <span>${title}</span> <span style="font-size:0.8rem; color:var(--text-muted); font-weight:normal;">(${list.length} Challenges)</span>`;
+        mainPracticeGrid.appendChild(secHeader);
+
+        list.forEach(ex => {
+            const card = document.createElement('div');
+            card.className = 'practice-card';
+            card.innerHTML = `
+                <div class="practice-card-header">
+                    <span class="practice-card-badge badge-${lang}">${lang.toUpperCase()}</span>
+                    <span class="practice-card-num">Exercise ${ex.id}</span>
+                </div>
+                <div class="practice-card-title">${ex.title}</div>
+                <div class="practice-card-footer">
+                    <span>Start Challenge</span>
+                    <i data-lucide="arrow-right"></i>
+                </div>
+            `;
+            card.addEventListener('click', () => {
+                loadExercisesItem(lang, ex.id);
+            });
+            mainPracticeGrid.appendChild(card);
+        });
+    };
+
     if (filter === 'all' || filter === 'java') {
-        if (window.JAVA_EXERCISES) {
-            window.JAVA_EXERCISES.forEach(ex => renderList.push({ ...ex, lang: 'java' }));
-        }
+        createSection('Java Exercises', 'coffee', 'java', window.JAVA_EXERCISES);
     }
     if (filter === 'all' || filter === 'python') {
-        if (window.PYTHON_EXERCISES) {
-            window.PYTHON_EXERCISES.forEach(ex => renderList.push({ ...ex, lang: 'python' }));
-        }
+        createSection('Python Exercises', 'code-2', 'python', window.PYTHON_EXERCISES);
     }
-
-    if (renderList.length === 0) {
-        mainPracticeGrid.innerHTML = '<div class="history-empty">No exercises loaded.</div>';
-        return;
-    }
-
-    renderList.forEach(ex => {
-        const card = document.createElement('div');
-        card.className = 'practice-card';
-        card.innerHTML = `
-            <div class="practice-card-header">
-                <span class="practice-card-badge badge-${ex.lang}">${ex.lang.toUpperCase()}</span>
-                <span class="practice-card-num">Exercise ${ex.id}</span>
-            </div>
-            <div class="practice-card-title">${ex.title}</div>
-            <div class="practice-card-footer">
-                <span>Start Challenge</span>
-                <i data-lucide="arrow-right"></i>
-            </div>
-        `;
-        card.addEventListener('click', () => {
-            loadExercisesItem(ex.lang, ex.id);
-        });
-        mainPracticeGrid.appendChild(card);
-    });
 
     if (window.lucide) lucide.createIcons();
 }
