@@ -389,6 +389,8 @@ function setupEventListeners() {
                 loginErrorMessage.classList.remove('hidden');
                 return;
             }
+
+            if (authMode === 'signup') {
                 // Register
                 try {
                     const response = await fetch(API_BASE + '/api/register', {
