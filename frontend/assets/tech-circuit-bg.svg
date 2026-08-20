@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="circuitGradLight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" stop-opacity="0.15"/>
+      <stop offset="50%" stop-color="#0369a1" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.05"/>
+    </linearGradient>
+
+    <linearGradient id="circuitGradDark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.2"/>
+      <stop offset="50%" stop-color="#818cf8" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.8"/>
+    </linearGradient>
+
+    <linearGradient id="cyanLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#0284c7" stop-opacity="0.4"/>
+    </linearGradient>
+
+    <linearGradient id="blueLine" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#0f4c81" stop-opacity="0.5"/>
+    </linearGradient>
+
+    <pattern id="dotGrid" width="30" height="30" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.2" fill="#0284c7" fill-opacity="0.15"/>
+    </pattern>
+  </defs>
+
+  <!-- Dot Grid Pattern -->
+  <rect width="100%" height="100%" fill="url(#dotGrid)"/>
+
+  <!-- Large Concentric Tech Dial (Top Left / Center Left) -->
+  <g transform="translate(450, 450)" fill="none" stroke-linecap="round">
+    <!-- Outer Gear Wheel -->
+    <circle cx="0" cy="0" r="320" stroke="#0284c7" stroke-width="1.5" stroke-dasharray="4 8 12 8" opacity="0.3"/>
+    <circle cx="0" cy="0" r="280" stroke="#06b6d4" stroke-width="2" stroke-dasharray="30 15 60 15" opacity="0.4"/>
+    <circle cx="0" cy="0" r="240" stroke="#0284c7" stroke-width="1" stroke-dasharray="8 8" opacity="0.25"/>
+
+    <!-- Gear Teeth Representation -->
+    <g stroke="#0369a1" stroke-width="3" opacity="0.35">
+      <line x1="0" y1="-280" x2="0" y2="-295"/>
+      <line x1="140" y1="-242" x2="147" y2="-255"/>
+      <line x1="242" y1="-140" x2="255" y2="-147"/>
+      <line x1="280" y1="0" x2="295" y2="0"/>
+      <line x1="242" y1="140" x2="255" y2="147"/>
+      <line x1="140" y1="242" x2="147" y2="255"/>
+      <line x1="0" y1="280" x2="0" y2="295"/>
+      <line x1="-140" y1="242" x2="-147" y2="255"/>
+      <line x1="-242" y1="140" x2="-255" y2="147"/>
+      <line x1="-280" y1="0" x2="-295" y2="0"/>
+      <line x1="-242" y1="-140" x2="-255" y2="-147"/>
+      <line x1="-140" y1="-242" x2="-147" y2="-255"/>
+    </g>
+
+    <!-- Inner Tech Rings & Dials -->
+    <circle cx="0" cy="0" r="180" stroke="url(#cyanLine)" stroke-width="3" opacity="0.5"/>
+    <circle cx="0" cy="0" r="120" stroke="#0284c7" stroke-width="1.5" stroke-dasharray="15 10 40 10" opacity="0.4"/>
+    <circle cx="0" cy="0" r="80" fill="none" stroke="#06b6d4" stroke-width="2" stroke-dasharray="5 5" opacity="0.3"/>
+  </g>
+
+  <!-- Circuit Traces & Bus Lines (Top Right & Center) -->
+  <g fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Main Circuit Trunk Line 1 -->
+    <path d="M 200 220 H 650 L 780 350 H 1350 L 1450 250 H 1800" stroke="url(#cyanLine)"/>
+    <path d="M 250 250 H 630 L 750 370 H 1280 L 1380 270 H 1850" stroke="#0284c7" stroke-opacity="0.5"/>
+    <path d="M 300 280 H 610 L 720 390 H 1220 L 1310 300 H 1900" stroke="#0369a1" stroke-opacity="0.35"/>
+
+    <!-- Circuit Trunk Line 2 (Middle to Right) -->
+    <path d="M 450 550 H 850 L 950 450 H 1400 L 1500 550 H 1920" stroke="url(#cyanLine)"/>
+    <path d="M 500 580 H 830 L 920 490 H 1350 L 1460 600 H 1880" stroke="#0284c7" stroke-opacity="0.45"/>
+
+    <!-- Circuit Trunk Line 3 (Bottom) -->
+    <path d="M 100 800 H 550 L 700 950 H 1500 L 1620 830 H 1920" stroke="#0284c7" stroke-opacity="0.4"/>
+    <path d="M 150 830 H 530 L 670 970 H 1450 L 1570 850 H 1850" stroke="#06b6d4" stroke-opacity="0.3"/>
+
+    <!-- Micro Branch Lines -->
+    <path d="M 950 450 V 220" stroke="#06b6d4" stroke-opacity="0.5" stroke-dasharray="6 6"/>
+    <path d="M 1350 350 V 550" stroke="#0284c7" stroke-opacity="0.4" stroke-dasharray="4 8"/>
+    <path d="M 1100 450 L 1150 370" stroke="#06b6d4" stroke-opacity="0.6"/>
+    <path d="M 1400 250 L 1450 180 H 1700" stroke="#0284c7" stroke-opacity="0.5"/>
+  </g>
+
+  <!-- Circuit Nodes & Terminal Points -->
+  <g fill="#06b6d4" stroke="#0284c7" stroke-width="1.5">
+    <circle cx="650" cy="220" r="5" opacity="0.8"/>
+    <circle cx="780" cy="350" r="6" opacity="0.9"/>
+    <circle cx="1350" cy="350" r="5" opacity="0.8"/>
+    <circle cx="1450" cy="250" r="6" fill="#0284c7"/>
+    
+    <circle cx="850" cy="550" r="5" opacity="0.8"/>
+    <circle cx="950" cy="450" r="7" fill="#06b6d4"/>
+    <circle cx="1400" cy="450" r="6" opacity="0.85"/>
+    <circle cx="1500" cy="550" r="5" opacity="0.75"/>
+
+    <circle cx="550" cy="800" r="5"/>
+    <circle cx="700" cy="950" r="6"/>
+    <circle cx="1500" cy="950" r="5"/>
+
+    <!-- Small Square Nodes -->
+    <rect x="1096" y="446" width="8" height="8" fill="#0284c7"/>
+    <rect x="1446" y="176" width="8" height="8" fill="#06b6d4"/>
+  </g>
+
+  <!-- Accent Gear Icon (Top Right) -->
+  <g transform="translate(1700, 200)" fill="none" stroke="#f59e0b" stroke-width="2.5" opacity="0.75">
+    <circle cx="0" cy="0" r="30" stroke-dasharray="10 5"/>
+    <circle cx="0" cy="0" r="14"/>
+    <path d="M 0 -38 V -22 M 0 22 V 38 M -38 0 H -22 M 22 0 H 38 M -27 -27 L -16 -16 M 16 16 L 27 27 M -27 27 L -16 16 M 16 -16 L 27 -27"/>
+  </g>
+
+  <!-- Accent Small Gear (Bottom Right) -->
+  <g transform="translate(1520, 680)" fill="none" stroke="#0284c7" stroke-width="2" opacity="0.6">
+    <circle cx="0" cy="0" r="22" stroke-dasharray="8 4"/>
+    <circle cx="0" cy="0" r="10"/>
+    <path d="M 0 -28 V -16 M 0 16 V 28 M -28 0 H -16 M 16 0 H 28"/>
+  </g>
+
+  <!-- Glowing Connection Pulse Highlights -->
+  <g fill="#38bdf8" filter="drop-shadow(0px 0px 8px #06b6d4)">
+    <circle cx="950" cy="450" r="4"/>
+    <circle cx="1450" cy="250" r="3.5"/>
+    <circle cx="780" cy="350" r="3.5"/>
+  </g>
+</svg>
