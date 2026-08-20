@@ -140,23 +140,27 @@ app.post('/api/register', (req, res) => {
         const { username = '', password = '' } = req.body;
         const trimmedUser = username.trim();
         const trimmedPass = password.trim();
-        if (!/^[a-zA-Z0-9_]{3,15}$/.test(trimmedUser)) {
-            return res.status(400).json({ error: 'Username must be 3–15 alphanumeric characters.' });
+        if (!/^[a-zA-Z0-9_.-]{3,30}$/.test(trimmedUser)) {
+            return res.status(400).json({ error: 'Username must be 3–30 alphanumeric characters.' });
         }
         if (!/^\d{4}$/.test(trimmedPass)) {
             return res.status(400).json({ error: 'Password must be exactly 4 numeric digits (0–9).' });
         }
         const dbPath = getUserDbPath(trimmedUser);
-        if (fs.existsSync(dbPath)) return res.status(400).json({ error: 'Username is already registered. Please sign in.' });
-
-        const db = {
-            username: trimmedUser,
-            passwordHash: hashPassword(trimmedPass),
-            profile: { name: trimmedUser, xp: 0, completed: [] },
-            history: []
-        };
+        let db = {};
+        if (fs.existsSync(dbPath)) {
+            db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+            db.passwordHash = hashPassword(trimmedPass);
+        } else {
+            db = {
+                username: trimmedUser,
+                passwordHash: hashPassword(trimmedPass),
+                profile: { name: trimmedUser, xp: 0, completed: [] },
+                history: []
+            };
+        }
         fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
-        res.json({ success: true, message: 'Account created successfully.' });
+        res.json({ success: true, message: 'Account registered successfully! Please sign in.' });
     } catch (e) {
         res.status(500).json({ error: 'Register failure: ' + e.message });
     }
@@ -168,17 +172,35 @@ app.post('/api/login', (req, res) => {
         const { username = '', password = '' } = req.body;
         const trimmedUser = username.trim();
         const trimmedPass = password.trim();
+        if (!trimmedUser) {
+            return res.status(400).json({ error: 'Please enter a username.' });
+        }
         if (!/^\d{4}$/.test(trimmedPass)) {
             return res.status(400).json({ error: 'Password must be exactly 4 numeric digits (0–9).' });
         }
         const dbPath = getUserDbPath(trimmedUser);
-        if (!fs.existsSync(dbPath)) return res.status(401).json({ error: 'Account not registered yet. Please click Register to create an account.' });
-
-        const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-        if (db.passwordHash !== hashPassword(trimmedPass)) {
-            return res.status(401).json({ error: 'Incorrect password. Please try again.' });
+        let db = {};
+        
+        if (!fs.existsSync(dbPath)) {
+            // Auto-create account if user attempts login
+            db = {
+                username: trimmedUser,
+                passwordHash: hashPassword(trimmedPass),
+                profile: { name: trimmedUser, xp: 0, completed: [] },
+                history: []
+            };
+            fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+        } else {
+            db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+            if (!db.passwordHash || db.passwordHash.length === 0) {
+                db.passwordHash = hashPassword(trimmedPass);
+                fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+            } else if (db.passwordHash !== hashPassword(trimmedPass)) {
+                return res.status(401).json({ error: 'Incorrect 4-digit PIN. Please try again.' });
+            }
         }
-        res.json({ success: true, username: db.username || trimmedUser, profile: db.profile, history: db.history });
+
+        res.json({ success: true, username: db.username || trimmedUser, profile: db.profile || { name: trimmedUser, xp: 0, completed: [] }, history: db.history || [] });
     } catch (e) {
         res.status(500).json({ error: 'Login failure: ' + e.message });
     }
