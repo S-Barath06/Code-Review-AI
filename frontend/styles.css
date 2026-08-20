@@ -68,10 +68,11 @@
 
 [data-theme="light"] .login-portal {
     background-color: #ffffff;
-    background-image: url('assets/user_bg.jpg');
+    background-image: url('assets/user_tech_bg.svg'), url('assets/user_bg.jpg');
     background-size: cover;
     background-position: center center;
     background-repeat: no-repeat;
+    image-rendering: -webkit-optimize-contrast;
 }
 
 [data-theme="light"] .login-box {
@@ -224,11 +225,12 @@
 body {
     font-family: var(--font-interface);
     background-color: var(--bg-primary);
-    background-image: url('assets/user_bg.jpg');
+    background-image: url('assets/user_tech_bg.svg'), url('assets/user_bg.jpg');
     background-size: cover;
     background-position: center center;
     background-repeat: no-repeat;
     background-attachment: fixed;
+    image-rendering: -webkit-optimize-contrast;
     color: var(--text-primary);
     height: 100vh;
     overflow: hidden;
@@ -1860,10 +1862,11 @@ input#profileName:focus {
     width: 100vw;
     height: 100vh;
     background-color: var(--bg-primary);
-    background-image: url('assets/user_bg.jpg');
+    background-image: url('assets/user_tech_bg.svg'), url('assets/user_bg.jpg');
     background-size: cover;
     background-position: center center;
     background-repeat: no-repeat;
+    image-rendering: -webkit-optimize-contrast;
     display: flex;
     align-items: center;
     justify-content: center;
