@@ -24,7 +24,16 @@ function getUserDbPath(username) {
     const clean = username.replace(/[^a-zA-Z0-9_]/g, '');
     const dir   = path.join(__dirname, 'database');
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    return path.join(dir, `db_${clean}.json`);
+    
+    // Case-insensitive file lookup for existing databases
+    const targetName = `db_${clean.toLowerCase()}.json`;
+    const files = fs.readdirSync(dir);
+    const existing = files.find(f => f.toLowerCase() === targetName);
+    if (existing) {
+        return path.join(dir, existing);
+    }
+    
+    return path.join(dir, `db_${clean.toLowerCase()}.json`);
 }
 
 function executeCode(code, language, input = '') {
@@ -129,16 +138,21 @@ app.get('/api/status', (req, res) => {
 app.post('/api/register', (req, res) => {
     try {
         const { username = '', password = '' } = req.body;
-        if (!/^[a-zA-Z0-9_]{3,15}$/.test(username.trim())) {
+        const trimmedUser = username.trim();
+        const trimmedPass = password.trim();
+        if (!/^[a-zA-Z0-9_]{3,15}$/.test(trimmedUser)) {
             return res.status(400).json({ error: 'Username must be 3–15 alphanumeric characters.' });
         }
-        const dbPath = getUserDbPath(username.trim());
-        if (fs.existsSync(dbPath)) return res.status(400).json({ error: 'Username already exists.' });
+        if (!/^\d{4}$/.test(trimmedPass)) {
+            return res.status(400).json({ error: 'Password must be exactly 4 numeric digits (0–9).' });
+        }
+        const dbPath = getUserDbPath(trimmedUser);
+        if (fs.existsSync(dbPath)) return res.status(400).json({ error: 'Username is already registered. Please sign in.' });
 
         const db = {
-            username: username.trim(),
-            passwordHash: hashPassword(password),
-            profile: { name: username.trim(), xp: 0, completed: [] },
+            username: trimmedUser,
+            passwordHash: hashPassword(trimmedPass),
+            profile: { name: trimmedUser, xp: 0, completed: [] },
             history: []
         };
         fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
@@ -152,14 +166,19 @@ app.post('/api/register', (req, res) => {
 app.post('/api/login', (req, res) => {
     try {
         const { username = '', password = '' } = req.body;
-        const dbPath = getUserDbPath(username.trim());
-        if (!fs.existsSync(dbPath)) return res.status(401).json({ error: 'Invalid username or password.' });
+        const trimmedUser = username.trim();
+        const trimmedPass = password.trim();
+        if (!/^\d{4}$/.test(trimmedPass)) {
+            return res.status(400).json({ error: 'Password must be exactly 4 numeric digits (0–9).' });
+        }
+        const dbPath = getUserDbPath(trimmedUser);
+        if (!fs.existsSync(dbPath)) return res.status(401).json({ error: 'Account not registered yet. Please click Register to create an account.' });
 
         const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-        if (db.passwordHash !== hashPassword(password)) {
-            return res.status(401).json({ error: 'Invalid username or password.' });
+        if (db.passwordHash !== hashPassword(trimmedPass)) {
+            return res.status(401).json({ error: 'Incorrect password. Please try again.' });
         }
-        res.json({ success: true, profile: db.profile, history: db.history });
+        res.json({ success: true, username: db.username || trimmedUser, profile: db.profile, history: db.history });
     } catch (e) {
         res.status(500).json({ error: 'Login failure: ' + e.message });
     }
@@ -169,12 +188,25 @@ app.post('/api/login', (req, res) => {
 app.post('/api/user/save', (req, res) => {
     try {
         const { username = '', profile, history } = req.body;
-        const dbPath = getUserDbPath(username.trim());
-        if (!fs.existsSync(dbPath)) return res.status(404).json({ error: 'User not found.' });
+        const trimmedUser = username.trim();
+        if (!trimmedUser) return res.status(400).json({ error: 'Missing username.' });
 
-        const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-        db.profile = profile;
-        db.history = history;
+        const dbPath = getUserDbPath(trimmedUser);
+        let db = {};
+        if (fs.existsSync(dbPath)) {
+            db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+        } else {
+            db = {
+                username: trimmedUser,
+                passwordHash: '',
+                profile: profile || { name: trimmedUser, xp: 0, completed: [] },
+                history: history || []
+            };
+        }
+
+        if (profile) db.profile = profile;
+        if (history) db.history = history;
+
         fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
         res.json({ success: true });
     } catch (e) {
