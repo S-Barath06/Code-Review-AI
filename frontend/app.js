@@ -1,7 +1,7 @@
 // Backend Server Base URL — auto-detects local vs deployed environment
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:3000'
-    : window.location.origin;
+const API_BASE = (window.location.protocol === 'http:' || window.location.protocol === 'https:')
+    ? window.location.origin
+    : 'http://localhost:3000';
 
 // State Management
 let appState = {
@@ -382,8 +382,12 @@ function setupEventListeners() {
             
             loginErrorMessage.classList.add('hidden');
             loginSuccessMessage.classList.add('hidden');
-            
-            if (authMode === 'signup') {
+
+            if (!/^\d{4}$/.test(password)) {
+                loginErrorMessage.textContent = "Password must be exactly 4 numeric digits (0–9).";
+                loginErrorMessage.classList.remove('hidden');
+                return;
+            }
                 // Register
                 try {
                     const response = await fetch(API_BASE + '/api/register', {
@@ -416,18 +420,19 @@ function setupEventListeners() {
                     });
                     const data = await response.json();
                     if (response.ok && data.success) {
+                        const canonicalUsername = (data.username || username).trim();
                         // Store auth tokens
                         localStorage.setItem('is_logged_in', 'true');
-                        localStorage.setItem('logged_in_username', username);
-                        appState.username = username;
+                        localStorage.setItem('logged_in_username', canonicalUsername);
+                        appState.username = canonicalUsername;
                         
                         // Set profile and history namespaces
-                        appState.profile = data.profile || { name: username, xp: 0, completed: [] };
+                        appState.profile = data.profile || { name: canonicalUsername, xp: 0, completed: [] };
                         appState.history = data.history || [];
                         
                         // Sync to local storage namespaces
-                        localStorage.setItem('user_profile_' + username, JSON.stringify(appState.profile));
-                        localStorage.setItem('review_history_' + username, JSON.stringify(appState.history));
+                        localStorage.setItem('user_profile_' + canonicalUsername, JSON.stringify(appState.profile));
+                        localStorage.setItem('review_history_' + canonicalUsername, JSON.stringify(appState.history));
                         
                         // Refresh display layout
                         renderProfile();
