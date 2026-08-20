@@ -137,6 +137,7 @@ function init() {
         
         loginPortal.classList.add('hidden');
         appContainer.classList.remove('hidden');
+        openHomePage();
     } else {
         loginPortal.classList.remove('hidden');
         appContainer.classList.add('hidden');
@@ -441,6 +442,7 @@ function setupEventListeners() {
                         // Switch views
                         loginPortal.classList.add('hidden');
                         appContainer.classList.remove('hidden');
+                        openHomePage();
                         lucide.createIcons();
                     } else {
                         loginErrorMessage.textContent = data.error || "Invalid username or password.";
