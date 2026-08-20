@@ -222,12 +222,21 @@ function Get-PasswordHash($password) {
 }
 
 function Get-UserDatabasePath($username) {
-    $cleanUsername = $username -replace '[^a-zA-Z0-9_]'
+    $cleanUsername = ($username -replace '[^a-zA-Z0-9_]').ToLower()
     $dbDir = Join-Path $PSScriptRoot "database"
     if (-not (Test-Path $dbDir)) {
         New-Item -ItemType Directory -Path $dbDir -Force | Out-Null
     }
-    return Join-Path $dbDir "db_$cleanUsername.json"
+    $targetName = "db_$cleanUsername.json"
+    if (Test-Path $dbDir) {
+        $files = Get-ChildItem -Path $dbDir -Filter "db_*.json"
+        foreach ($f in $files) {
+            if ($f.Name.ToLower() -eq $targetName) {
+                return $f.FullName
+            }
+        }
+    }
+    return Join-Path $dbDir $targetName
 }
 
 $listener = New-Object System.Net.HttpListener
@@ -248,7 +257,7 @@ try {
         if ($request.HttpMethod -eq "GET" -and $url -eq "/api/status") {
             $apiKey = $env:GROQ_API_KEY
             if ([string]::IsNullOrEmpty($apiKey)) {
-                $envFilePath = Join-Path "E:\code-review-agent\backend" ".env"
+                $envFilePath = Join-Path $PSScriptRoot ".env"
                 if (Test-Path $envFilePath) {
                     $envLines = Get-Content $envFilePath
                     foreach ($line in $envLines) {
@@ -284,12 +293,15 @@ try {
                 
                 if ($username -notmatch '^[a-zA-Z0-9_]{3,15}$') {
                     $response.StatusCode = 400
-                    $resObj = @{ error = "Username must be alphanumeric, between 3 and 15 characters." } | ConvertTo-Json
+                    $resObj = @{ error = "Username must be 3–15 alphanumeric characters." } | ConvertTo-Json
+                } elseif ($password -notmatch '^\d{4}$') {
+                    $response.StatusCode = 400
+                    $resObj = @{ error = "Password must be exactly 4 numeric digits (0–9)." } | ConvertTo-Json
                 } else {
                     $dbPath = Get-UserDatabasePath $username
                     if (Test-Path $dbPath) {
                         $response.StatusCode = 400
-                        $resObj = @{ error = "Username already exists." } | ConvertTo-Json
+                        $resObj = @{ error = "Username is already registered. Please sign in." } | ConvertTo-Json
                     } else {
                         $passwordHash = Get-PasswordHash $password
                         $initialDb = @{
@@ -333,11 +345,15 @@ try {
                 $username = $body.username.Trim()
                 $password = $body.password.Trim()
                 
-                $dbPath = Get-UserDatabasePath $username
-                if (-not (Test-Path $dbPath)) {
-                    $response.StatusCode = 401
-                    $resObj = @{ error = "Invalid username or password." } | ConvertTo-Json
+                if ($password -notmatch '^\d{4}$') {
+                    $response.StatusCode = 400
+                    $resObj = @{ error = "Password must be exactly 4 numeric digits (0–9)." } | ConvertTo-Json
                 } else {
+                    $dbPath = Get-UserDatabasePath $username
+                    if (-not (Test-Path $dbPath)) {
+                        $response.StatusCode = 401
+                        $resObj = @{ error = "Account not registered yet. Please click Register to create an account." } | ConvertTo-Json
+                    } else {
                     $dbContent = Get-Content $dbPath -Raw | ConvertFrom-Json
                     $passwordHash = Get-PasswordHash $password
                     
@@ -345,12 +361,13 @@ try {
                         $response.StatusCode = 200
                         $resObj = @{
                             success = $true
+                            username = if ($dbContent.username) { $dbContent.username } else { $username }
                             profile = $dbContent.profile
                             history = $dbContent.history
                         } | ConvertTo-Json -Depth 10
                     } else {
                         $response.StatusCode = 401
-                        $resObj = @{ error = "Invalid username or password." } | ConvertTo-Json
+                        $resObj = @{ error = "Incorrect password. Please try again." } | ConvertTo-Json
                     }
                 }
             } catch {
@@ -379,22 +396,27 @@ try {
                 $history = $body.history
                 
                 $dbPath = Get-UserDatabasePath $username
-                if (-not (Test-Path $dbPath)) {
-                    $response.StatusCode = 404
-                    $resObj = @{ error = "User database file not found." } | ConvertTo-Json
-                } else {
+                $dbContent = $null
+                if (Test-Path $dbPath) {
                     $dbContent = Get-Content $dbPath -Raw | ConvertFrom-Json
-                    
-                    # Update database properties
-                    $dbContent.profile = $profile
-                    $dbContent.history = $history
-                    
-                    $updatedDbJson = ConvertTo-Json $dbContent -Depth 10
-                    [System.IO.File]::WriteAllText($dbPath, $updatedDbJson)
-                    
-                    $response.StatusCode = 200
-                    $resObj = @{ success = $true } | ConvertTo-Json
+                } else {
+                    $dbContent = [PSCustomObject]@{
+                        username = $username
+                        passwordHash = ""
+                        profile = $profile
+                        history = $history
+                    }
                 }
+                
+                # Update database properties
+                if ($profile) { $dbContent.profile = $profile }
+                if ($history) { $dbContent.history = $history }
+                
+                $updatedDbJson = ConvertTo-Json $dbContent -Depth 10
+                [System.IO.File]::WriteAllText($dbPath, $updatedDbJson)
+                
+                $response.StatusCode = 200
+                $resObj = @{ success = $true } | ConvertTo-Json
             } catch {
                 $response.StatusCode = 500
                 $resObj = @{ error = "Save failure: " + $_.Exception.Message } | ConvertTo-Json
