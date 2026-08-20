@@ -291,19 +291,21 @@ try {
                 $username = $body.username.Trim()
                 $password = $body.password.Trim()
                 
-                if ($username -notmatch '^[a-zA-Z0-9_]{3,15}$') {
+                if ($username -notmatch '^[a-zA-Z0-9_.-]{3,30}$') {
                     $response.StatusCode = 400
-                    $resObj = @{ error = "Username must be 3–15 alphanumeric characters." } | ConvertTo-Json
+                    $resObj = @{ error = "Username must be 3–30 alphanumeric characters." } | ConvertTo-Json
                 } elseif ($password -notmatch '^\d{4}$') {
                     $response.StatusCode = 400
                     $resObj = @{ error = "Password must be exactly 4 numeric digits (0–9)." } | ConvertTo-Json
                 } else {
                     $dbPath = Get-UserDatabasePath $username
+                    $passwordHash = Get-PasswordHash $password
                     if (Test-Path $dbPath) {
-                        $response.StatusCode = 400
-                        $resObj = @{ error = "Username is already registered. Please sign in." } | ConvertTo-Json
+                        $existingDb = Get-Content $dbPath -Raw | ConvertFrom-Json
+                        $existingDb.passwordHash = $passwordHash
+                        $updatedJson = ConvertTo-Json $existingDb -Depth 10
+                        [System.IO.File]::WriteAllText($dbPath, $updatedJson)
                     } else {
-                        $passwordHash = Get-PasswordHash $password
                         $initialDb = @{
                             username = $username
                             passwordHash = $passwordHash
@@ -316,10 +318,10 @@ try {
                         }
                         $initialDbJson = ConvertTo-Json $initialDb -Depth 10
                         [System.IO.File]::WriteAllText($dbPath, $initialDbJson)
-                        
-                        $response.StatusCode = 200
-                        $resObj = @{ success = $true; message = "Account created successfully." } | ConvertTo-Json
                     }
+                    
+                    $response.StatusCode = 200
+                    $resObj = @{ success = $true; message = "Account registered successfully! Please sign in." } | ConvertTo-Json
                 }
             } catch {
                 $response.StatusCode = 500
@@ -345,30 +347,49 @@ try {
                 $username = $body.username.Trim()
                 $password = $body.password.Trim()
                 
-                if ($password -notmatch '^\d{4}$') {
+                if (-not $username) {
+                    $response.StatusCode = 400
+                    $resObj = @{ error = "Please enter a username." } | ConvertTo-Json
+                } elseif ($password -notmatch '^\d{4}$') {
                     $response.StatusCode = 400
                     $resObj = @{ error = "Password must be exactly 4 numeric digits (0–9)." } | ConvertTo-Json
                 } else {
                     $dbPath = Get-UserDatabasePath $username
-                    if (-not (Test-Path $dbPath)) {
-                        $response.StatusCode = 401
-                        $resObj = @{ error = "Account not registered yet. Please click Register to create an account." } | ConvertTo-Json
-                    } else {
-                    $dbContent = Get-Content $dbPath -Raw | ConvertFrom-Json
                     $passwordHash = Get-PasswordHash $password
+                    
+                    if (-not (Test-Path $dbPath)) {
+                        $initialDb = @{
+                            username = $username
+                            passwordHash = $passwordHash
+                            profile = @{ name = $username; xp = 0; completed = @() }
+                            history = @()
+                        }
+                        $initialDbJson = ConvertTo-Json $initialDb -Depth 10
+                        [System.IO.File]::WriteAllText($dbPath, $initialDbJson)
+                        $dbContent = $initialDb
+                    } else {
+                        $dbContent = Get-Content $dbPath -Raw | ConvertFrom-Json
+                    }
+                    
+                    if ([string]::IsNullOrEmpty($dbContent.passwordHash)) {
+                        $dbContent.passwordHash = $passwordHash
+                        $updatedJson = ConvertTo-Json $dbContent -Depth 10
+                        [System.IO.File]::WriteAllText($dbPath, $updatedJson)
+                    }
                     
                     if ($dbContent.passwordHash -eq $passwordHash) {
                         $response.StatusCode = 200
                         $resObj = @{
                             success = $true
                             username = if ($dbContent.username) { $dbContent.username } else { $username }
-                            profile = $dbContent.profile
-                            history = $dbContent.history
+                            profile = if ($dbContent.profile) { $dbContent.profile } else { @{ name = $username; xp = 0; completed = @() } }
+                            history = if ($dbContent.history) { $dbContent.history } else { @() }
                         } | ConvertTo-Json -Depth 10
                     } else {
                         $response.StatusCode = 401
-                        $resObj = @{ error = "Incorrect password. Please try again." } | ConvertTo-Json
+                        $resObj = @{ error = "Incorrect 4-digit PIN. Please try again." } | ConvertTo-Json
                     }
+                }
                 }
             } catch {
                 $response.StatusCode = 500
