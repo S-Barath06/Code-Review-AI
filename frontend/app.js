@@ -112,12 +112,35 @@ async function saveUserDatabaseState() {
     }
 }
 
+// Sync user state from backend database to appState and local storage
+async function syncUserBackendState() {
+    if (!appState.username) return;
+    try {
+        const response = await fetch(API_BASE + '/api/user/data?username=' + encodeURIComponent(appState.username));
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                if (data.profile) appState.profile = data.profile;
+                if (data.history) appState.history = data.history;
+
+                localStorage.setItem('user_profile_' + appState.username, JSON.stringify(appState.profile));
+                localStorage.setItem('review_history_' + appState.username, JSON.stringify(appState.history));
+
+                renderProfile();
+                renderHistory();
+            }
+        }
+    } catch (err) {
+        console.warn("Could not sync user state from backend server:", err);
+    }
+}
+
 // Initialize the Application
 function init() {
     // Auto-redirect if opened via file:// protocol instead of http server
     if (window.location.protocol === 'file:') {
         const fileName = window.location.pathname.split('/').pop();
-        window.location.replace('http://localhost:8000/' + (fileName || 'index.html'));
+        window.location.replace('http://localhost:3000/' + (fileName || 'index.html'));
         return;
     }
 
@@ -133,6 +156,9 @@ function init() {
         if (appState.username) {
             appState.profile = JSON.parse(localStorage.getItem('user_profile_' + appState.username)) || { name: appState.username, xp: 0, completed: [] };
             appState.history = JSON.parse(localStorage.getItem('review_history_' + appState.username)) || [];
+            
+            // Sync latest backend database state asynchronously
+            syncUserBackendState();
         }
         
         loginPortal.classList.add('hidden');
