@@ -280,6 +280,47 @@ try {
             continue
         }
 
+        # Handle API User Data Endpoint
+        if ($request.HttpMethod -eq "GET" -and $url.StartsWith("/api/user/data")) {
+            try {
+                $queryString = $request.Url.Query
+                $username = ""
+                if ($queryString -match "username=([^&]+)") {
+                    $username = [System.Uri]::UnescapeDataString($Matches[1]).Trim()
+                }
+                
+                if (-not $username) {
+                    $response.StatusCode = 400
+                    $resObj = @{ error = "Missing username parameter." } | ConvertTo-Json
+                } else {
+                    $dbPath = Get-UserDatabasePath $username
+                    if (-not (Test-Path $dbPath)) {
+                        $response.StatusCode = 404
+                        $resObj = @{ error = "User not found." } | ConvertTo-Json
+                    } else {
+                        $dbContent = Get-Content $dbPath -Raw | ConvertFrom-Json
+                        $response.StatusCode = 200
+                        $resObj = @{
+                            success = $true
+                            username = if ($dbContent.username) { $dbContent.username } else { $username }
+                            profile = if ($dbContent.profile) { $dbContent.profile } else { @{ name = $username; xp = 0; completed = @() } }
+                            history = if ($dbContent.history) { $dbContent.history } else { @() }
+                        } | ConvertTo-Json -Depth 10
+                    }
+                }
+            } catch {
+                $response.StatusCode = 500
+                $resObj = @{ error = "Data fetch failure: " + $_.Exception.Message } | ConvertTo-Json
+            }
+            
+            $response.ContentType = "application/json; charset=utf-8"
+            $responseBytes = [System.Text.Encoding]::UTF8.GetBytes($resObj)
+            $response.ContentLength64 = $responseBytes.Length
+            $response.OutputStream.Write($responseBytes, 0, $responseBytes.Length)
+            $response.OutputStream.Close()
+            continue
+        }
+
         # Handle API Register Endpoint
         if ($request.HttpMethod -eq "POST" -and $url -eq "/api/register") {
             try {
@@ -299,13 +340,11 @@ try {
                     $resObj = @{ error = "Password must be exactly 4 numeric digits (0–9)." } | ConvertTo-Json
                 } else {
                     $dbPath = Get-UserDatabasePath $username
-                    $passwordHash = Get-PasswordHash $password
                     if (Test-Path $dbPath) {
-                        $existingDb = Get-Content $dbPath -Raw | ConvertFrom-Json
-                        $existingDb.passwordHash = $passwordHash
-                        $updatedJson = ConvertTo-Json $existingDb -Depth 10
-                        [System.IO.File]::WriteAllText($dbPath, $updatedJson)
+                        $response.StatusCode = 400
+                        $resObj = @{ error = "Account already exists. Please sign in instead." } | ConvertTo-Json
                     } else {
+                        $passwordHash = Get-PasswordHash $password
                         $initialDb = @{
                             username = $username
                             passwordHash = $passwordHash
@@ -318,10 +357,10 @@ try {
                         }
                         $initialDbJson = ConvertTo-Json $initialDb -Depth 10
                         [System.IO.File]::WriteAllText($dbPath, $initialDbJson)
+                        
+                        $response.StatusCode = 200
+                        $resObj = @{ success = $true; message = "Account registered successfully! Please sign in." } | ConvertTo-Json
                     }
-                    
-                    $response.StatusCode = 200
-                    $resObj = @{ success = $true; message = "Account registered successfully! Please sign in." } | ConvertTo-Json
                 }
             } catch {
                 $response.StatusCode = 500
@@ -355,41 +394,32 @@ try {
                     $resObj = @{ error = "Password must be exactly 4 numeric digits (0–9)." } | ConvertTo-Json
                 } else {
                     $dbPath = Get-UserDatabasePath $username
-                    $passwordHash = Get-PasswordHash $password
-                    
                     if (-not (Test-Path $dbPath)) {
-                        $initialDb = @{
-                            username = $username
-                            passwordHash = $passwordHash
-                            profile = @{ name = $username; xp = 0; completed = @() }
-                            history = @()
-                        }
-                        $initialDbJson = ConvertTo-Json $initialDb -Depth 10
-                        [System.IO.File]::WriteAllText($dbPath, $initialDbJson)
-                        $dbContent = $initialDb
+                        $response.StatusCode = 404
+                        $resObj = @{ error = "Account does not exist. Please sign up first." } | ConvertTo-Json
                     } else {
                         $dbContent = Get-Content $dbPath -Raw | ConvertFrom-Json
+                        $passwordHash = Get-PasswordHash $password
+                        
+                        if ([string]::IsNullOrEmpty($dbContent.passwordHash)) {
+                            $dbContent.passwordHash = $passwordHash
+                            $updatedJson = ConvertTo-Json $dbContent -Depth 10
+                            [System.IO.File]::WriteAllText($dbPath, $updatedJson)
+                        }
+                        
+                        if ($dbContent.passwordHash -eq $passwordHash) {
+                            $response.StatusCode = 200
+                            $resObj = @{
+                                success = $true
+                                username = if ($dbContent.username) { $dbContent.username } else { $username }
+                                profile = if ($dbContent.profile) { $dbContent.profile } else { @{ name = $username; xp = 0; completed = @() } }
+                                history = if ($dbContent.history) { $dbContent.history } else { @() }
+                            } | ConvertTo-Json -Depth 10
+                        } else {
+                            $response.StatusCode = 401
+                            $resObj = @{ error = "Incorrect 4-digit PIN. Please try again." } | ConvertTo-Json
+                        }
                     }
-                    
-                    if ([string]::IsNullOrEmpty($dbContent.passwordHash)) {
-                        $dbContent.passwordHash = $passwordHash
-                        $updatedJson = ConvertTo-Json $dbContent -Depth 10
-                        [System.IO.File]::WriteAllText($dbPath, $updatedJson)
-                    }
-                    
-                    if ($dbContent.passwordHash -eq $passwordHash) {
-                        $response.StatusCode = 200
-                        $resObj = @{
-                            success = $true
-                            username = if ($dbContent.username) { $dbContent.username } else { $username }
-                            profile = if ($dbContent.profile) { $dbContent.profile } else { @{ name = $username; xp = 0; completed = @() } }
-                            history = if ($dbContent.history) { $dbContent.history } else { @() }
-                        } | ConvertTo-Json -Depth 10
-                    } else {
-                        $response.StatusCode = 401
-                        $resObj = @{ error = "Incorrect 4-digit PIN. Please try again." } | ConvertTo-Json
-                    }
-                }
                 }
             } catch {
                 $response.StatusCode = 500
@@ -470,7 +500,7 @@ try {
                 # Find API Key from .env
                 $apiKey = $request.Headers["X-Groq-API-Key"]
                 if ([string]::IsNullOrEmpty($apiKey)) {
-                    $envFilePath = Join-Path "E:\code-review-agent\backend" ".env"
+                    $envFilePath = Join-Path $PSScriptRoot ".env"
                     if (Test-Path $envFilePath) {
                         $envLines = Get-Content $envFilePath
                         foreach ($line in $envLines) {
@@ -578,7 +608,8 @@ You MUST return ONLY a valid JSON object with NO extra text, markdown, or explan
         }
         
         # Resolve file path
-        $filePath = Join-Path "E:\code-review-agent\frontend" $url.Substring(1)
+        $frontendDir = Join-Path $PSScriptRoot "..\frontend"
+        $filePath = Join-Path $frontendDir $url.Substring(1)
         
         if (Test-Path $filePath -PathType Leaf) {
             $content = [System.IO.File]::ReadAllBytes($filePath)
