@@ -21,7 +21,7 @@ function hashPassword(password) {
 }
 
 function getUserDbPath(username) {
-    const clean = username.replace(/[^a-zA-Z0-9_]/g, '');
+    const clean = username.trim().replace(/[^a-zA-Z0-9_.-]/g, '_');
     const dir   = path.join(__dirname, 'database');
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     
@@ -34,6 +34,26 @@ function getUserDbPath(username) {
     }
     
     return path.join(dir, `db_${clean.toLowerCase()}.json`);
+}
+
+function readUserDb(username) {
+    const dbPath = getUserDbPath(username);
+    if (!fs.existsSync(dbPath)) return null;
+    try {
+        const raw = fs.readFileSync(dbPath, 'utf8');
+        if (!raw || !raw.trim()) return null;
+        return JSON.parse(raw);
+    } catch (e) {
+        console.error(`Error reading database file for user ${username}:`, e.message);
+        return null;
+    }
+}
+
+function writeUserDb(username, data) {
+    const dbPath = getUserDbPath(username);
+    const tmpPath = `${dbPath}.tmp`;
+    fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf8');
+    fs.renameSync(tmpPath, dbPath);
 }
 
 function executeCode(code, language, input = '') {
@@ -134,6 +154,28 @@ app.get('/api/status', (req, res) => {
     res.json({ live: !!(key && key.length > 10) });
 });
 
+// GET /api/user/data
+app.get('/api/user/data', (req, res) => {
+    try {
+        const username = (req.query.username || '').trim();
+        if (!username) {
+            return res.status(400).json({ error: 'Missing username parameter.' });
+        }
+        const db = readUserDb(username);
+        if (!db) {
+            return res.status(404).json({ error: 'User not found.' });
+        }
+        res.json({
+            success: true,
+            username: db.username || username,
+            profile: db.profile || { name: username, xp: 0, completed: [] },
+            history: db.history || []
+        });
+    } catch (e) {
+        res.status(500).json({ error: 'Data fetch failure: ' + e.message });
+    }
+});
+
 // POST /api/register
 app.post('/api/register', (req, res) => {
     try {
@@ -146,20 +188,19 @@ app.post('/api/register', (req, res) => {
         if (!/^\d{4}$/.test(trimmedPass)) {
             return res.status(400).json({ error: 'Password must be exactly 4 numeric digits (0–9).' });
         }
-        const dbPath = getUserDbPath(trimmedUser);
-        let db = {};
-        if (fs.existsSync(dbPath)) {
-            db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-            db.passwordHash = hashPassword(trimmedPass);
-        } else {
-            db = {
-                username: trimmedUser,
-                passwordHash: hashPassword(trimmedPass),
-                profile: { name: trimmedUser, xp: 0, completed: [] },
-                history: []
-            };
+        
+        const existingDb = readUserDb(trimmedUser);
+        if (existingDb) {
+            return res.status(400).json({ error: 'Account already exists. Please sign in instead.' });
         }
-        fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+
+        const newDb = {
+            username: trimmedUser,
+            passwordHash: hashPassword(trimmedPass),
+            profile: { name: trimmedUser, xp: 0, completed: [] },
+            history: []
+        };
+        writeUserDb(trimmedUser, newDb);
         res.json({ success: true, message: 'Account registered successfully! Please sign in.' });
     } catch (e) {
         res.status(500).json({ error: 'Register failure: ' + e.message });
@@ -178,29 +219,27 @@ app.post('/api/login', (req, res) => {
         if (!/^\d{4}$/.test(trimmedPass)) {
             return res.status(400).json({ error: 'Password must be exactly 4 numeric digits (0–9).' });
         }
-        const dbPath = getUserDbPath(trimmedUser);
-        let db = {};
-        
-        if (!fs.existsSync(dbPath)) {
-            // Auto-create account if user attempts login
-            db = {
-                username: trimmedUser,
-                passwordHash: hashPassword(trimmedPass),
-                profile: { name: trimmedUser, xp: 0, completed: [] },
-                history: []
-            };
-            fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
-        } else {
-            db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-            if (!db.passwordHash || db.passwordHash.length === 0) {
-                db.passwordHash = hashPassword(trimmedPass);
-                fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
-            } else if (db.passwordHash !== hashPassword(trimmedPass)) {
-                return res.status(401).json({ error: 'Incorrect 4-digit PIN. Please try again.' });
-            }
+
+        const db = readUserDb(trimmedUser);
+        if (!db) {
+            return res.status(404).json({ error: 'Account does not exist. Please sign up first.' });
         }
 
-        res.json({ success: true, username: db.username || trimmedUser, profile: db.profile || { name: trimmedUser, xp: 0, completed: [] }, history: db.history || [] });
+        if (db.passwordHash && db.passwordHash !== hashPassword(trimmedPass)) {
+            return res.status(401).json({ error: 'Incorrect 4-digit PIN. Please try again.' });
+        }
+
+        if (!db.passwordHash) {
+            db.passwordHash = hashPassword(trimmedPass);
+            writeUserDb(trimmedUser, db);
+        }
+
+        res.json({
+            success: true,
+            username: db.username || trimmedUser,
+            profile: db.profile || { name: trimmedUser, xp: 0, completed: [] },
+            history: db.history || []
+        });
     } catch (e) {
         res.status(500).json({ error: 'Login failure: ' + e.message });
     }
@@ -213,11 +252,8 @@ app.post('/api/user/save', (req, res) => {
         const trimmedUser = username.trim();
         if (!trimmedUser) return res.status(400).json({ error: 'Missing username.' });
 
-        const dbPath = getUserDbPath(trimmedUser);
-        let db = {};
-        if (fs.existsSync(dbPath)) {
-            db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-        } else {
+        let db = readUserDb(trimmedUser);
+        if (!db) {
             db = {
                 username: trimmedUser,
                 passwordHash: '',
@@ -229,7 +265,7 @@ app.post('/api/user/save', (req, res) => {
         if (profile) db.profile = profile;
         if (history) db.history = history;
 
-        fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+        writeUserDb(trimmedUser, db);
         res.json({ success: true });
     } catch (e) {
         res.status(500).json({ error: 'Save failure: ' + e.message });
